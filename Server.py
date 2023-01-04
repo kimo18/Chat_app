@@ -21,6 +21,9 @@ brodcast_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 brodcast_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 brodcast_server_socket.bind(BROADCASTADDR)
 
+
+
+
 # server socket that client use to send after succesfull client registeration
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
@@ -120,16 +123,28 @@ def broadStart():
     print(f"[LISTENING] Server is listening brodcasts on {BROADCASTADDR}")
     while True:
         message, addr = brodcast_server_socket.recvfrom(64)
-
         message= message.decode(FORMAT)
+        message,Type= message.split(",")[0],message.split(",")[1]
         print(message)
-        ConnNumber= message.split(",")[0]
-        Type=message.split(",")[1]
+        if len(message.split(":"))==2:
 
-        print(ConnNumber, Type)
+            if message.split(":")[0]=="CONN":
+                try:
+                    connect_to_client_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    connect_to_client_socket.connect((addr[0],int(message.split(":")[1])))
+
+                except:
+                    print("yoU WERE TRYING TO CONNECT TO AN ALREADY CONNECTION ")
+            
+                continue
+
+        
+
+
+        print(message, Type)
         # SendRoomsThread = threading.Thread(target=SendRooms, args=(senderIP,addr,Type))
         # SendRoomsThread.start()
-        SendRooms(int(ConnNumber),addr,Type)
+        SendRooms(int(message),addr,Type)
 def SendRooms(ConnNumber,addr,Type):
     print(addr)
     if  ConnNumber and Type:

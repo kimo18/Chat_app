@@ -3,6 +3,8 @@ import time
 import threading
 import sys
 import pickle
+
+
 HEADER = 64
 Socketconn=""
 BROADCASTIP= "255.255.255.255"
@@ -15,27 +17,18 @@ FT=True
 broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
+# BOOLS
+not_connected=True
+
 def broadcast(ip,port,message):
     # Create a UDP socket
     
     # while True:
 
     # Send message on broadcast address
-    print(message)
     MESSAGE = message+","+"Client"
     broadcast_socket.sendto(MESSAGE.encode(FORMAT), (ip, port))
     # time.sleep(2)
-    
-    
-
-
-serverPort=5050
-serverIP = socket.gethostbyname(socket.gethostname())
-ADDR = (serverIP, serverPort)
-
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(ADDR)
-
 def send(msg):
     message = msg.encode(FORMAT)
     msg_length = len(message)
@@ -45,11 +38,8 @@ def send(msg):
     client.send(message)
     # print(client.recv(64).decode(FORMAT))
 
-
-  
-
-
-def NormReceiver():
+def NormReceiver(LserverIP):
+    client.connect((LserverIP,5050))
     global FT
     while True:
 
@@ -59,20 +49,56 @@ def NormReceiver():
             global Socketconn
             Socketconn= client.recv(64).decode(FORMAT)    
             print(Socketconn)  
-            FT=False
+            FT=False 
+
+# WHEN THE SOCKET RECEVIES THE IP FROM THE SERVER IT CONNECT WITH THE SERVER TCP
+def GetServerIP():
+    global not_connected
+    started = False
+    client_to_listen.listen()
+    while not_connected:
+        conn, LServerIP = client_to_listen.accept()
+        print("accepted")
+
+        # START HERE TO listen from messeages coming from tcp Side
+        if not(started):
+            Recthread= threading.Thread(target=NormReceiver,args=(LServerIP[0],))
+            Recthread.start()
+            started =True
+        
+        not_connected=False
+        conn.close()
+
+# SETUP THE CLIENT THAT WOULD CONNECT TO THE LEADER SERVER 
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# ---------------------------------------------------------------------------------------
+
+# LISTEN TO ANSWERS FROM THE BRODCASTED MESSAGE
+client_to_listen = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_to_listen.bind((MYIP,0))
+Port_tobroadcast=client_to_listen.getsockname()[1]
+print("this is the port",Port_tobroadcast)
+# START THE THREAD THAT LISTENS FOR THE LEADER
+get_leaderIP_Thread=threading.Thread(target=GetServerIP)
+get_leaderIP_Thread.start()
+#-----------------------------------------------------------------------------------------
+
+# BROADCAST THE MESSAGE TO THE LEADER SERVER 
+while not_connected:
+    broadcast(BROADCASTIP,BROADCASTPORT,"CONN:"+str(Port_tobroadcast))
+
+serverIP = socket.gethostbyname(socket.gethostname())
+#--------------------------------------------------------------------------------------------
+
+
+
+
+  
+
+
+
 # send broadcast message over network so Leader answers
 
-
-
-
-Recthread= threading.Thread(target=NormReceiver)
-Recthread.start()
-
-while FT:
-    time.sleep(1)
-broadcastmessage=  socket.gethostbyname(socket.gethostname())
-broadthread= threading.Thread(target=broadcast, args=(BROADCASTIP, BROADCASTPORT,Socketconn))
-broadthread.start()
 
 
 while True:
