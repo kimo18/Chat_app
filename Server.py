@@ -151,6 +151,7 @@ class Server:
         self.leaderserver_to_server_socket.listen()
         while True:
             conn, addr = self.leaderserver_to_server_socket.accept()
+            print(addr)
             thread = threading.Thread(target=self.server_recv, args=(conn, addr))      
             thread.start()
 # _________________________________________________________________________________________
@@ -224,8 +225,13 @@ class Server:
 
                 if message.split(":")[0]=="CONN":
                     connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    self,address =connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
-                    print(f"From Leader: this is the tcp socket that connects to Server {self} {address}")
+
+                    connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
+                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket}")
+
+                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket.getsockname}")
+                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket.getpeername}")
+
                     connect_to_server_socket.send(str(f"Hello from Server {self.server_ip}").encode(self.FORMAT))
                     continue
 
