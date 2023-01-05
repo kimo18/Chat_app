@@ -43,13 +43,14 @@ def handle_client(conn, addr):
                 if len(Message)>1:
                     roomname = Message[1]
                     for x in ChatRooms:
-                        if x.name == roomname and (addr[1]  in x.users):
+                        # Check if the user wrote a valid chatroom name, and also whether or not the user is a member of that chatroom.
+                        if x.name == roomname and (addr[1] in x.users):
                             for socketnum in x.users:
                                 if not(addr[1]== socketnum):
                                     if len(Message)>2:
                                          AllconnectedComp[socketnum][1].send(Message[2].encode(FORMAT))
 
-            # CREATE A CHAT ROOM AND ADD THE USER HOW CREATED IT
+            # CREATE A CHAT ROOM AND ADD THE USER WHO CREATED IT
 
             if msg[:7]=="/CREATE":
                 # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
