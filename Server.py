@@ -34,7 +34,7 @@ class Server:
 
     server_server_socket=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # Intializing TCP Server to listen from Clients messages
     server_tolisten_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -195,7 +195,7 @@ class Server:
     def ServerBroadListen(self):
         print(f"[LISTENING] Server is listening brodcasts from Servers on {self.SERVERSERVERADDR}")
         while True:
-            message, addr = self.broadcast_server_socket.recvfrom(self.HEADER)
+            message, addr = self.server_server_socket.recvfrom(self.HEADER)
             message= message.decode(self.FORMAT)
             message,Type= message.split(",")[0],message.split(",")[1]
             print(message)
