@@ -18,6 +18,7 @@ class Server:
     port = 0
     ADDR=(server_ip,0)
     BROADCASTADDR=(server_ip,5972)
+    SERVERSERVERADDR=(server_ip,6060)
     max_connections = 0
     server_dic={}
     current_connections = 0
@@ -30,15 +31,25 @@ class Server:
     broadcast_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     broadcast_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     broadcast_server_socket.bind(BROADCASTADDR)
+
+    server_server_socket=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # Intializing TCP Server to listen from Clients messages
     server_tolisten_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def __init__(self, is_leader,port=5050, max_connections=5):
         self.is_leader = is_leader=="True"
         self.port = int(port)
+        # self.broadStart()
         self.ADDR=(self.server_ip,self.port)
         self.server_tolisten_socket.bind(self.ADDR)
         self.max_connections = max_connections
+        if self.is_leader:
+            self.server_server_socket.bind(self.SERVERSERVERADDR)
+            threading.Thread(target=self.ServerBroadListen).start()
+        else:
+            self.s_broadcast(6060,f"Conn:{self.port}")
 # _________________________________________________________________________________________
 
     def handle_client(self,conn, addr):
@@ -172,6 +183,31 @@ class Server:
                     message=x.name+","+ x.server_on+"\n"
                     self.all_connected_client[ConnNumber][1].send(message.encode(self.FORMAT))
                 self.all_connected_client[ConnNumber][1].send(str("If you want to create a Chat Room for you you can also create one by /CREATE").encode(self.FORMAT))
+
+# _________________________________________________________________________________________
+
+    def s_broadcast(self,port,message):
+
+        MESSAGE = message+","+"Server"
+        self.server_server_socket.sendto(MESSAGE.encode(self.FORMAT), ("255.255.255.255", port))
+# _________________________________________________________________________________________
+
+    def ServerBroadListen(self):
+        print(f"[LISTENING] Server is listening brodcasts from Servers on {self.SERVERSERVERADDR}")
+        while True:
+            message, addr = self.broadcast_server_socket.recvfrom(self.HEADER)
+            message= message.decode(self.FORMAT)
+            message,Type= message.split(",")[0],message.split(",")[1]
+            print(message)
+            if len(message.split(":"))==2:
+
+                if message.split(":")[0]=="CONN":
+                    connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
+                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket}")
+                    connect_to_server_socket.send(str(f"Hello from Server {self.server_ip}").encode(self.FORMAT))
+                    continue
+
 # _________________________________________________________________________________________
 
     def begin(self):
@@ -179,8 +215,7 @@ class Server:
         broadthread= threading.Thread(target=self.broadStart)
         broadthread.start()
         thread.start()
-
-
+# _________________________________________________________________________________________
 
 def main(is_leader,port):
     our_server= Server(is_leader,port)
