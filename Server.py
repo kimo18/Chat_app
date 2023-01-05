@@ -53,7 +53,6 @@ class Server:
 
         else:
             self.leaderserver_to_server_socket.bind((self.server_ip, 0))
-            print(f"d7kkkkkkkkkkkkkkkkkkkk{self.leaderserver_to_server_socket.getsockname()[1]}")
             self.s_broadcast(6060,f"CONN:{self.leaderserver_to_server_socket.getsockname()[1]}")
             threading.Thread(target=self.serverlisten).start()
 
@@ -157,9 +156,14 @@ class Server:
 # _________________________________________________________________________________________
     def server_recv(self, conn, addr):
         while True:
-            message = conn.recv(self.HEADER).decode(self.FORMAT)
+            message = conn.recv(4096)
+            message=pickle.load(message)
+            self.server_dic=message[0]
+            self.number_servers=message[1]
+            self.chat_rooms=message[2]
+            self.all_connected_client=message[3]
             if message:
-                print(message)
+                print(self.all_connected_client,self.chat_rooms,self.number_servers,self.server_dic)
 
 # _________________________________________________________________________________________
     def broadStart(self):
@@ -227,12 +231,10 @@ class Server:
                     connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
                     connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
-                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket}")
-
-                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket.getsockname}")
-                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket.getpeername}")
-
-                    connect_to_server_socket.send(str(f"Hello from Server {self.server_ip}").encode(self.FORMAT))
+                    self.server_dic[connect_to_server_socket.getsockname()[1]]=[connect_to_server_socket.getpeername()[0],connect_to_server_socket]
+                    self.number_servers= self.number_servers+1     
+                    to_send = pickle.dump([self.server_dic,self.number_servers,self.chat_rooms,self.all_connected_client])
+                    connect_to_server_socket.send(to_send)
                     continue
 
 # _________________________________________________________________________________________
