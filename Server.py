@@ -157,7 +157,7 @@ class Server:
     def server_recv(self, conn, addr):
         while True:
             message = conn.recv(4096)
-            message=pickle.load(message)
+            message=pickle.loads(message)
             self.server_dic=message[0]
             self.number_servers=message[1]
             self.chat_rooms=message[2]
