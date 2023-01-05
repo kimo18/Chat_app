@@ -141,11 +141,12 @@ class Server:
             print(message)
             if len(message.split(":"))==2:
 
-                if message.split(":")[0]=="CONN" and self.is_leader:
+                if message.split(":")[0]=="CONN":
                     # try:
-                    print(f"Leader with address: {self.server_ip}")
-                    connect_to_client_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    connect_to_client_socket.connect((addr[0],int(message.split(":")[1])))
+                    if self.is_leader:
+                        print(f"Leader with address: {self.server_ip}")
+                        connect_to_client_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        connect_to_client_socket.connect((addr[0],int(message.split(":")[1])))
 
                     # except:
                     #     print("yoU WERE TRYING TO CONNECT TO AN ALREADY CONNECTION ")
