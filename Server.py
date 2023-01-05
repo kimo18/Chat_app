@@ -25,12 +25,6 @@ class Server:
     chat_rooms=[]
     all_connected_client={}
 
-    def __init__(self, is_leader,port=5050, max_connections=5):
-        self.is_leader = is_leader
-        self.port = port
-        self.ADDR=(self.server_ip,self.port)
-        self.max_connections = max_connections
-
 # Intializing broadcast server to listen from other componenets
     broadcast_server_socket=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     broadcast_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -38,9 +32,13 @@ class Server:
     broadcast_server_socket.bind(BROADCASTADDR)
 # Intializing TCP Server to listen from Clients messages
     server_tolisten_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_tolisten_socket.bind(ADDR)
 
-
+    def __init__(self, is_leader,port=5050, max_connections=5):
+        self.is_leader = bool(is_leader)
+        self.port = int(port)
+        self.ADDR=(self.server_ip,self.port)
+        self.server_tolisten_socket.bind(self.ADDR)
+        self.max_connections = max_connections
 # _________________________________________________________________________________________
 
     def handle_client(self,conn, addr):
@@ -122,7 +120,7 @@ class Server:
 # _________________________________________________________________________________________
     def start(self):
         self.server_tolisten_socket.listen()
-        print(f"[LISTENING] Server is listening on {self.server_ip}")
+        print(f"[LISTENING] Server is listening on {self.server_ip, self.port}")
         # we accept any connection , then we create a new thread for this connection so we can communicate with it by handle connection function
         while True:
             conn, addr = self.server_tolisten_socket.accept()

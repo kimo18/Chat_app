@@ -58,7 +58,7 @@ def GetServerIP():
     client_to_listen.listen()
     while not_connected:
         conn, LServerIP = client_to_listen.accept()
-        print("accepted")
+        print("accepted",LServerIP)
 
         # START HERE TO listen from messeages coming from tcp Side
         if not(started):
