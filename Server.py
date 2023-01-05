@@ -37,6 +37,7 @@ class Server:
     # server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # Intializing TCP Server to listen from Clients messages
     server_tolisten_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    leaderserver_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def __init__(self, is_leader,port=5050, max_connections=5):
         self.is_leader = is_leader=="True"
@@ -48,8 +49,13 @@ class Server:
         if self.is_leader:
             self.server_server_socket.bind(self.SERVERSERVERADDR)
             threading.Thread(target=self.ServerBroadListen).start()
+            
+
         else:
-            self.s_broadcast(6060,f"Conn:{self.port}")
+            self.leaderserver_to_server_socket.bind((self.server_ip, 0))
+            self.s_broadcast(6060,f"CONN:{self.leaderserver_to_server_socket.getsockname()[1]}")
+            threading.Thread(target=self.serverlisten).start()
+
 # _________________________________________________________________________________________
 
     def handle_client(self,conn, addr):
@@ -140,6 +146,20 @@ class Server:
             thread = threading.Thread(target=self.handle_client, args=(conn, addr))      
             thread.start()
 # _________________________________________________________________________________________
+    def serverlisten(self):
+        self.leaderserver_to_server_socket.listen()
+        while True:
+            conn, addr = self.leaderserver_to_server_socket.accept()
+            thread = threading.Thread(target=self.server_recv, args=(conn, addr))      
+            thread.start()
+# _________________________________________________________________________________________
+    def server_recv(self, conn, addr):
+        while True:
+            message = conn.recv(self.HEADER).decode(self.FORMAT)
+            if message:
+                print(message)
+
+# _________________________________________________________________________________________
     def broadStart(self):
         print(f"[LISTENING] Server is listening brodcasts on {self.BROADCASTADDR}")
         while True:
@@ -198,7 +218,7 @@ class Server:
             message, addr = self.server_server_socket.recvfrom(self.HEADER)
             message= message.decode(self.FORMAT)
             message,Type= message.split(",")[0],message.split(",")[1]
-            print(message)
+            print(message,"kofta")
             if len(message.split(":"))==2:
 
                 if message.split(":")[0]=="CONN":
