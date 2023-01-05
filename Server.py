@@ -53,6 +53,7 @@ class Server:
 
         else:
             self.leaderserver_to_server_socket.bind((self.server_ip, 0))
+            print(f"d7kkkkkkkkkkkkkkkkkkkk{self.leaderserver_to_server_socket.getsockname()[1]}")
             self.s_broadcast(6060,f"CONN:{self.leaderserver_to_server_socket.getsockname()[1]}")
             threading.Thread(target=self.serverlisten).start()
 
@@ -223,8 +224,8 @@ class Server:
 
                 if message.split(":")[0]=="CONN":
                     connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
-                    print(f"From Leader: this is the tcp socket that connects to Server {connect_to_server_socket}")
+                    self,address =connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
+                    print(f"From Leader: this is the tcp socket that connects to Server {self} {address}")
                     connect_to_server_socket.send(str(f"Hello from Server {self.server_ip}").encode(self.FORMAT))
                     continue
 
