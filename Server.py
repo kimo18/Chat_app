@@ -34,7 +34,7 @@ class Server:
     server_tolisten_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def __init__(self, is_leader,port=5050, max_connections=5):
-        self.is_leader = bool(is_leader)
+        self.is_leader = is_leader=="True"
         self.port = int(port)
         self.ADDR=(self.server_ip,self.port)
         self.server_tolisten_socket.bind(self.ADDR)
