@@ -161,9 +161,8 @@ class Server:
             self.server_dic=message[0]
             self.number_servers=message[1]
             self.chat_rooms=message[2]
-            self.all_connected_client=message[3]
             if message:
-                print(self.all_connected_client,self.chat_rooms,self.number_servers,self.server_dic)
+                print(self.chat_rooms,self.number_servers,self.server_dic)
 
 # _________________________________________________________________________________________
     def broadStart(self):
@@ -231,9 +230,9 @@ class Server:
                     connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
                     connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
-                    self.server_dic[connect_to_server_socket.getsockname()[1]]=[connect_to_server_socket.getpeername()[0],connect_to_server_socket]
+                    self.server_dic[connect_to_server_socket.getsockname()[1]]=[connect_to_server_socket.getpeername()[0],connect_to_server_socket.getpeername()[1],connect_to_server_socket.getsockname()[0]]
                     self.number_servers= self.number_servers+1     
-                    to_send = pickle.dump([self.server_dic,self.number_servers,self.chat_rooms,self.all_connected_client])
+                    to_send = pickle.dumps([self.server_dic,self.number_servers,self.chat_rooms]) #self.all_connected_client
                     connect_to_server_socket.send(to_send)
                     continue
 
