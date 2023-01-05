@@ -123,18 +123,19 @@ def broadStart():
     print(f"[LISTENING] Server is listening brodcasts on {BROADCASTADDR}")
     while True:
         message, addr = brodcast_server_socket.recvfrom(64)
+  
         message= message.decode(FORMAT)
         message,Type= message.split(",")[0],message.split(",")[1]
         print(message)
         if len(message.split(":"))==2:
 
             if message.split(":")[0]=="CONN":
-                try:
-                    connect_to_client_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    connect_to_client_socket.connect((addr[0],int(message.split(":")[1])))
+                # try:
+                connect_to_client_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                connect_to_client_socket.connect((addr[0],int(message.split(":")[1])))
 
-                except:
-                    print("yoU WERE TRYING TO CONNECT TO AN ALREADY CONNECTION ")
+                # except:
+                #     print("yoU WERE TRYING TO CONNECT TO AN ALREADY CONNECTION ")
             
                 continue
 

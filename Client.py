@@ -85,7 +85,9 @@ get_leaderIP_Thread.start()
 
 # BROADCAST THE MESSAGE TO THE LEADER SERVER 
 while not_connected:
+    print("Iam broadcasting")
     broadcast(BROADCASTIP,BROADCASTPORT,"CONN:"+str(Port_tobroadcast))
+    time.sleep(0.5)
 
 serverIP = socket.gethostbyname(socket.gethostname())
 #--------------------------------------------------------------------------------------------
