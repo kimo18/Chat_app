@@ -189,7 +189,11 @@ class Server:
     def server_recv(self, conn, addr):
         while True:
             messagelen = conn.recv(64)
-            message=conn.recv(messagelen.decode(self.FORMAT))
+            try:
+                messagelen=pickle.loads(messagelen)
+                message=conn.recv(len(messagelen))
+            except:    
+                message=conn.recv(len(messagelen.decode(self.FORMAT)))
             print("the message received is ", message)
             if len(message) > 0:
                 try:
@@ -382,12 +386,13 @@ class Server:
     def send_updates(self, to_send):
         for ip_port in self.server_dic:
             if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"):
-                connect_to_server_socket = socket.socket(
-                    socket.AF_INET, socket.SOCK_STREAM)
+                connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 connect_to_server_socket.connect((ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
                 print("sending to Server",ip_port)
-                connect_to_server_socket.send(b' '*(self.HEADER-len(str(len(to_send)).encode(self.FORMAT))))
+                to_send_len= len(to_send)
+                Str += b' '*(self.HEADER-len(to_send_len))
+                connect_to_server_socket.send(Str)
                 connect_to_server_socket.send(to_send)
 
 
