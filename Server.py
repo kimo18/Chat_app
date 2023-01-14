@@ -171,6 +171,7 @@ class Server:
 
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
+        print("Heloooooooooooooooooooooo",self.leaderserver_to_server_socket.getsockname())
         while True:
             if (self.leaderIP != None):
 
@@ -191,6 +192,7 @@ class Server:
     def server_recv(self, conn, addr):
         while True:
             message = conn.recv(4096)
+            print("the message received is ", message)
             if len(message) > 0:
                 if not (message == "HEARTBEAT"):
                     message = pickle.loads(message)
@@ -203,6 +205,7 @@ class Server:
                             f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
                 else:
                     # change the server hp to True when the leader server receives hearbeat
+                    print("Iam in")
                     for i, ip, _ in enumerate(self.server_hp):
                         if ip == f"{addr[0]}:{conn.getpeername()[1]}":
                             self.server_hp[i] = (ip, True)
@@ -242,10 +245,10 @@ class Server:
 
 # Send heartbeat message from servers to leader server
     def send_heartbeat_message(self):
-            leader_IP, leader_port = self.leaderIP.split(":")[0], int(self.leaderIP.split(":")[1])
             
             while True:
-                if not self.is_leader:
+                if not self.is_leader and self.leaderIP:
+                    leader_IP, leader_port = self.leaderIP.split(":")[0], int(self.leaderIP.split(":")[1])
                     connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     connect_to_server_socket.connect((leader_IP, leader_port))
                     time.sleep(2)
@@ -376,9 +379,9 @@ class Server:
             if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"):
                 connect_to_server_socket = socket.socket(
                     socket.AF_INET, socket.SOCK_STREAM)
-                connect_to_server_socket.connect(
-                    (ip_port.split(":")[0], int(ip_port.split(":")[1])))
+                connect_to_server_socket.connect((ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
+                print("sending to Server",ip_port)
                 connect_to_server_socket.send(to_send)
 
 
