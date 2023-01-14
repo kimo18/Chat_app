@@ -24,7 +24,9 @@ class Server:
     chat_rooms = []
     all_connected_client = {}
     Ring = []
-    leaderIP = ""
+    leaderIP = None
+    # list of boolean indicating the hp of the servers(is alive)
+    server_hp = []
 # Intializing broadcast server to listen from other componenets
     broadcast_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     broadcast_server_socket.setsockopt(
@@ -199,8 +201,14 @@ class Server:
                     if message:
                         print(
                             f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
+                else:
+                    # change the server hp to True when the leader server receives hearbeat
+                    for i, ip, _ in enumerate(self.server_hp):
+                        if ip == f"{addr[0]}:{conn.getpeername()[1]}":
+                            self.server_hp[i] = (ip, True)
 
                     # _________________________________________________________________________________________
+
     def broadStart(self):
         print(
             f"[LISTENING] Server is listening brodcasts on {self.BROADCASTADDR}")
@@ -250,6 +258,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
         if ConnNumber and Type:
@@ -285,29 +294,28 @@ class Server:
             message, addr = self.server_server_socket.recvfrom(self.HEADER)
             message = message.decode(self.FORMAT)
             message, Type = message.split(",")[0], message.split(",")[1]
+            newServer = f"{addr[0]}:{int(message.split(':')[1])}"
             # check if the broadcasted message is not in the server dic
-            if not (f"{addr[0]}:{int(message.split(':')[1])}" in self.server_dic):
-                self.server_dic.append(f"{addr[0]}:{message.split(':')[1]}")
+            if not (newServer in self.server_dic):
+                self.server_hp.append((newServer, False))
+                self.server_dic.append(newServer)
                 self.number_servers = len(self.server_dic)
                 self.form_ring()
+                t = threading.Thread(
+                    target=self.ttl_set_remove, args=(self, newServer, 5))
 
             if len(message.split(":")) == 2:
 
                 if message.split(":")[0] == "CONN":
-                    for ip_port in self.server_dic:
-                        if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"):
-                            connect_to_server_socket = socket.socket(
-                                socket.AF_INET, socket.SOCK_STREAM)
-                            connect_to_server_socket.connect(
-                                (ip_port.split(":")[0], int(ip_port.split(":")[1])))
-                            to_send = pickle.dumps(
-                                [self.chat_rooms, self.server_dic, self.leaderIP])
-                            print("to send", len(to_send))
-                            # sending here the chat room replica to the new connected server
-                            connect_to_server_socket.send(to_send)
-                    continue
+
+                    to_send = pickle.dumps(
+                        [self.chat_rooms, self.server_dic, self.leaderIP])
+                    self.send_updates(to_send)
+                    print("to send", len(to_send))
+
 
 # _________________________________________________________________________________________
+
 
     def begin(self):
         thread = threading.Thread(target=self.start)
@@ -347,8 +355,31 @@ class Server:
         else:
             return None
 
-    def detect_crash(self):
-        print("hahahahah")
+    def ttl_set_remove(self, server, ttl):
+        while True:
+            time.sleep(ttl)
+            self.detect_crash(server)
+
+    def detect_crash(self, server):
+
+        for i, ip, hp in enumerate(self.server_hp):
+            if ip == server:
+                if not hp:
+                    self.server_dic.remove(server)
+                    self.server_hp.remove((ip, hp))
+                    self.form_ring()
+                else:
+                    self.server_hp[i] = (ip, False)
+
+    def send_updates(self, to_send):
+        for ip_port in self.server_dic:
+            if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"):
+                connect_to_server_socket = socket.socket(
+                    socket.AF_INET, socket.SOCK_STREAM)
+                connect_to_server_socket.connect(
+                    (ip_port.split(":")[0], int(ip_port.split(":")[1])))
+                # sending here the chat room replica to the new connected server
+                connect_to_server_socket.send(to_send)
 
 
 def main(is_leader, port):
