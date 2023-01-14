@@ -269,6 +269,7 @@ class Server:
                         connect_to_server_socket.send(message_to_send.encode(self.FORMAT))
                     # maybe we'll start leader election here
                     except:
+                        self.server_dic.remove(self.leaderIP)
                         print("LEADER SERVER CRASHED!!")
 
 
@@ -399,8 +400,20 @@ class Server:
                 connect_to_server_socket.send(to_send_len)
                 connect_to_server_socket.send(to_send)
     def start_election(self):
-       print("Leader election started ..........")
-    def forward_election_mess(self):
+        print("Leader election started ..........")
+        current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
+        node_index=self.server_dic.index(current_node)
+        message={"Type":"ELECT",
+            "PID":node_index,
+            "is_leader":False}
+        message=pickle.dumps(message)
+        next_node= self.get_neighbour()
+        ip, port = next_node.split(":")[0],int(next_node.split(":")[1])
+        ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ring_socket.connect((ip, port))
+        ring_socket.send(message)
+
+    def forward_election_message(self,message):
         print("Forwarding election message ...........")    
 
 def main(is_leader, port):
