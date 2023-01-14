@@ -178,8 +178,6 @@ class Server:
             conn, addr = self.leaderserver_to_server_socket.accept()
             thread = threading.Thread( target=self.server_recv, args=(conn, addr))
             thread.start()
-            self.server_dic.append(f"{conn.getpeername()[0]}:{conn.getpeername()[1]}")
-            self.number_servers = len(self.server_dic)
             print("bttts",addr)
 
 # _________________________________________________________________________________________
@@ -257,7 +255,7 @@ class Server:
             while not recevied:
                 if self.leaderIP:
                     recevied=True
-                    
+
             leader_IP, leader_port = self.leaderIP.split(":")[0], int(self.leaderIP.split(":")[1])
             connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             connect_to_server_socket.connect((leader_IP, leader_port))
@@ -319,8 +317,7 @@ class Server:
                 self.server_dic.append(newServer)
                 self.number_servers = len(self.server_dic)
                 self.form_ring()
-                t = threading.Thread(
-                    target=self.ttl_set_remove, args=(self, newServer, 5))
+                threading.Thread(target=self.ttl_set_remove, args=(newServer, 5)).start()
 
             if len(message.split(":")) == 2:
 
@@ -391,6 +388,8 @@ class Server:
 
     def send_updates(self, to_send):
         for ip_port in self.server_dic:
+
+            print("what is the problema ",ip_port)
             if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"):
                 connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 connect_to_server_socket.connect((ip_port.split(":")[0], int(ip_port.split(":")[1])))
