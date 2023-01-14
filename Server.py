@@ -260,7 +260,7 @@ class Server:
                     time.sleep(2)
                     try:
                         message_to_send=f"HEARTBEAT:{self.leaderserver_to_server_socket.getsockname()[1]}"
-                        connect_to_server_socket.send(message_to_send.encode(self.FORMAT)+b' '*(self.HEADER-len(str(len(message_to_send)).encode(self.FORMAT))))
+                        connect_to_server_socket.send(str(len(message_to_send)).encode(self.FORMAT)+b' '*(self.HEADER-len(str(len(message_to_send)).encode(self.FORMAT))))
                         connect_to_server_socket.send(message_to_send.encode(self.FORMAT))
                     # maybe we'll start leader election here
                     except:
