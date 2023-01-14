@@ -353,9 +353,8 @@ class Server:
         print("RingFormed")
 
     def get_neighbour(self, direction='left'):
-        tobeindexed = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
-        current_node_index = self.server_dic.index(
-            tobeindexed) if tobeindexed in self.server_dic else -1
+        current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
+        current_node_index = self.server_dic.index(current_node) if current_node in self.server_dic else -1
         if current_node_index != -1:
             if direction == 'left':
                 if current_node_index + 1 == len(self.server_dic):
@@ -383,6 +382,7 @@ class Server:
                     self.server_dic.remove(server)
                     self.server_hp.remove((ip[0], ip[1]))
                     self.form_ring()
+                    self.send_updates(pickle.dumps([self.chat_rooms,self.server_dic,self.leaderIP]))
                 else:
                     self.server_hp[i] = (ip[0], False)
 
@@ -398,7 +398,10 @@ class Server:
                 to_send_len= pickle.dumps(len(to_send))
                 connect_to_server_socket.send(to_send_len)
                 connect_to_server_socket.send(to_send)
-
+    def start_election(self):
+       print("Leader election started ..........")
+    def forward_election_mess(self):
+        print("Forwarding election message ...........")    
 
 def main(is_leader, port):
     our_server = Server(is_leader, port)
