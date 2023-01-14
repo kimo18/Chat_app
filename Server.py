@@ -55,6 +55,7 @@ class Server:
             f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}")
         self.number_servers = len(self.server_dic)
         threading.Thread(target=self.serverlisten).start()
+        threading.Thread(target=self.send_heartbeat_message).start()
 
         # if you are the leader then you listen for the broadcasted messages from the other server
         if self.is_leader:
@@ -172,15 +173,13 @@ class Server:
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",self.leaderserver_to_server_socket.getsockname())
+
         while True:
             conn, addr = self.leaderserver_to_server_socket.accept()
-            thread = threading.Thread(
-                target=self.server_recv, args=(conn, addr))
+            thread = threading.Thread( target=self.server_recv, args=(conn, addr))
             thread.start()
-            self.server_dic.append(
-                f"{conn.getpeername()[0]}:{conn.getpeername()[1]}")
+            self.server_dic.append(f"{conn.getpeername()[0]}:{conn.getpeername()[1]}")
             self.number_servers = len(self.server_dic)
-            threading.Thread(target=self.send_heartbeat_message).start()
             print("bttts",addr)
 
 # _________________________________________________________________________________________
@@ -254,12 +253,17 @@ class Server:
 
 # Send heartbeat message from servers to leader server
     def send_heartbeat_message(self):
-            
+            recevied =False
+            while not recevied:
+                if self.leaderIP:
+                    recevied=True
+                    
+            leader_IP, leader_port = self.leaderIP.split(":")[0], int(self.leaderIP.split(":")[1])
+            connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            connect_to_server_socket.connect((leader_IP, leader_port))
+
             while True:
                 if not self.is_leader and self.leaderIP:
-                    leader_IP, leader_port = self.leaderIP.split(":")[0], int(self.leaderIP.split(":")[1])
-                    connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    connect_to_server_socket.connect((leader_IP, leader_port))
                     time.sleep(2)
                     try:
                         message_to_send=f"HEARTBEAT:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -376,14 +380,14 @@ class Server:
 
     def detect_crash(self, server):
 
-        for i, ip, hp in enumerate(self.server_hp):
-            if ip == server:
-                if not hp:
+        for i, ip in enumerate(self.server_hp):
+            if ip[0] == server:
+                if not ip[1]:
                     self.server_dic.remove(server)
-                    self.server_hp.remove((ip, hp))
+                    self.server_hp.remove((ip[0], ip[1]))
                     self.form_ring()
                 else:
-                    self.server_hp[i] = (ip, False)
+                    self.server_hp[i] = (ip[0], False)
 
     def send_updates(self, to_send):
         for ip_port in self.server_dic:
