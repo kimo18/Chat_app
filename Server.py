@@ -173,11 +173,6 @@ class Server:
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",self.leaderserver_to_server_socket.getsockname())
         while True:
-            if (self.leaderIP != None):
-
-                heartbeat_thread = threading.Thread(target=self.send_heartbeat_message())
-                heartbeat_thread.start()
-
             conn, addr = self.leaderserver_to_server_socket.accept()
             thread = threading.Thread(
                 target=self.server_recv, args=(conn, addr))
@@ -185,30 +180,38 @@ class Server:
             self.server_dic.append(
                 f"{conn.getpeername()[0]}:{conn.getpeername()[1]}")
             self.number_servers = len(self.server_dic)
+            heartbeat_thread = threading.Thread(target=self.send_heartbeat_message())
+            heartbeat_thread.start()
             print(addr)
 
 # _________________________________________________________________________________________
 #  server receive from other server
     def server_recv(self, conn, addr):
         while True:
-            message = conn.recv(4096)
+            messagelen = conn.recv(64)
+            message=conn.recv(messagelen.decode(self.FORMAT))
             print("the message received is ", message)
             if len(message) > 0:
-                if not (message == "HEARTBEAT"):
+                try:
+                    message=pickle.loads(message)
                     message = pickle.loads(message)
                     self.chat_rooms = message[0]
                     self.server_dic = message[1]
                     self.leaderIP = message[2]
                     self.number_servers = len(self.server_dic)
                     if message:
-                        print(
-                            f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
-                else:
+                        print(f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
+                except:
+
                     # change the server hp to True when the leader server receives hearbeat
                     print("Iam in")
-                    for i, ip, _ in enumerate(self.server_hp):
-                        if ip == f"{addr[0]}:{conn.getpeername()[1]}":
-                            self.server_hp[i] = (ip, True)
+                    message=message.decode(self.FORMAT)   
+                    port= message.split(":")[1]         
+                    for i, ip in enumerate(self.server_hp):
+                        if ip[0] == f"{addr[0]}:{port}":
+
+                            self.server_hp[i] = (ip[0], True)
+                            print("booooooga",self.server_hp)
 
                     # _________________________________________________________________________________________
 
@@ -253,7 +256,9 @@ class Server:
                     connect_to_server_socket.connect((leader_IP, leader_port))
                     time.sleep(2)
                     try:
-                        connect_to_server_socket.send("HEARTBEAT")
+                        message_to_send=f"HEARTBEAT:{self.leaderserver_to_server_socket.getsockname()[1]}"
+                        connect_to_server_socket.send(b' '*(self.HEADER-len(str(len(message_to_send)).encode(self.FORMAT))))
+                        connect_to_server_socket.send(message_to_send.encode(self.FORMAT))
                     # maybe we'll start leader election here
                     except:
                         print("LEADER SERVER CRASHED!!")
@@ -382,6 +387,7 @@ class Server:
                 connect_to_server_socket.connect((ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
                 print("sending to Server",ip_port)
+                connect_to_server_socket.send(b' '*(self.HEADER-len(str(len(to_send)).encode(self.FORMAT))))
                 connect_to_server_socket.send(to_send)
 
 
