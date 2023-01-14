@@ -243,6 +243,8 @@ class Server:
             message,Type= message.split(",")[0],message.split(",")[1]
             # check if the broadcasted message is not in the server dic
             if  not(f"{addr[0]}:{int(message.split(':')[1])}" in self.server_dic):
+                self.server_dic.append(f"{addr[0]}:{message.split(':')[1]}")
+                self.number_servers= len(self.server_dic) 
                 self.form_ring()
 
             if len(message.split(":"))==2:
@@ -250,9 +252,8 @@ class Server:
                 if message.split(":")[0]=="CONN":
                     connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
-                    to_send = pickle.dumps([self.chat_rooms,self.server_dic]) 
-                    self.server_dic.append(f"{connect_to_server_socket.getpeername()[0]}:{connect_to_server_socket.getpeername()[1]}")
-                    self.number_servers= len(self.server_dic)   
+                    to_send = pickle.dumps([self.chat_rooms,self.server_dic])                    
+                    print("to send",to_send)
                     connect_to_server_socket.send(to_send) # sending here the chat room replica to the new connected server
                     continue
 
@@ -266,13 +267,13 @@ class Server:
 # _________________________________________________________________________________________
 #  For leader election                                                                     
     def form_ring(self):                                                                   
-        print("before"+self.server_dic)
+        print("before",self.server_dic)
 
         ports=[member.split(":")[1] for member in self.server_dic]
         ips=[socket.inet_aton(member.split(":")[0]) for member in self.server_dic]
         index=[i[0] for i in sorted(enumerate(ips), key=lambda x:x[1])]
-        self.server_dic=[f"{ip}:{port}" for _,ip,port in sorted(zip(index, ips,ports))]
-        print("after"+self.server_dic)
+        self.server_dic=[f"{socket.inet_ntoa(ip)}:{port}" for _,ip,port in sorted(zip(index, ips,ports))]
+        print("after",self.server_dic)
         print("RingFormed")
 
     def get_neighbour(self, direction='left'):
