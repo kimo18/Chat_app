@@ -180,24 +180,27 @@ class Server:
             self.server_dic.append(
                 f"{conn.getpeername()[0]}:{conn.getpeername()[1]}")
             self.number_servers = len(self.server_dic)
-            heartbeat_thread = threading.Thread(target=self.send_heartbeat_message())
-            heartbeat_thread.start()
-            print(addr)
+            threading.Thread(target=self.send_heartbeat_message).start()
+            print("bttts",addr)
 
 # _________________________________________________________________________________________
 #  server receive from other server
     def server_recv(self, conn, addr):
         while True:
             messagelen = conn.recv(64)
+            message=""
             try:
                 messagelen=pickle.loads(messagelen)
                 message=conn.recv(messagelen)
-            except:    
+
+            except: 
+                
                 message=conn.recv(len(messagelen.decode(self.FORMAT)))
-            print("the message received is ", message)
+
             if len(message) > 0:
                 try:
                     message = pickle.loads(message)
+                    print("pickled")
                     self.chat_rooms = message[0]
                     self.server_dic = message[1]
                     self.leaderIP = message[2]
