@@ -173,8 +173,8 @@ class Server:
         self.leaderserver_to_server_socket.listen()
         while True:
             if (self.leaderIP != None):
-                heartbeat_thread = threading.Thread(
-                    target=self.send_heartbeat_message())
+
+                heartbeat_thread = threading.Thread(target=self.send_heartbeat_message())
                 heartbeat_thread.start()
 
             conn, addr = self.leaderserver_to_server_socket.accept()
@@ -242,18 +242,18 @@ class Server:
 
 # Send heartbeat message from servers to leader server
     def send_heartbeat_message(self):
-        leader_IP, leader_port = self.leaderIP.split(
-            ":")[0], int(self.leaderIP.split(":")[1])
-        connect_to_server_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
-        connect_to_server_socket.connect((leader_IP, leader_port))
-        while True:
-            time.sleep(2)
-            try:
-                connect_to_server_socket.send("HEARTBEAT")
-            # maybe we'll start leader election here
-            except:
-                print("LEADER SERVER CRASHED!!")
+            leader_IP, leader_port = self.leaderIP.split(":")[0], int(self.leaderIP.split(":")[1])
+            
+            while True:
+                if not self.is_leader:
+                    connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    connect_to_server_socket.connect((leader_IP, leader_port))
+                    time.sleep(2)
+                    try:
+                        connect_to_server_socket.send("HEARTBEAT")
+                    # maybe we'll start leader election here
+                    except:
+                        print("LEADER SERVER CRASHED!!")
 
 
 # _________________________________________________________________________________________
