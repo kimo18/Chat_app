@@ -250,7 +250,7 @@ class Server:
         while True:
             time.sleep(2)
             try:
-                self.send("HEARTBEAT")
+                connect_to_server_socket.send("HEARTBEAT")
             # maybe we'll start leader election here
             except:
                 print("LEADER SERVER CRASHED!!")
