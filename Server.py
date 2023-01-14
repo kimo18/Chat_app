@@ -47,15 +47,19 @@ class Server:
         self.ADDR=(self.server_ip,self.port)
         self.server_tolisten_socket.bind(self.ADDR)
         self.max_connections = max_connections
+        self.leaderserver_to_server_socket.bind((self.server_ip, 0))
+        self.server_dic.append(f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}")
+        self.number_servers=len(self.server_dic)
+        threading.Thread(target=self.serverlisten).start()
+
+        # if you are the leader then you listen for the broadcasted messages from the other server
         if self.is_leader:
             self.server_server_socket.bind(self.SERVERSERVERADDR)
             threading.Thread(target=self.ServerBroadListen).start()
             
-
+        # when you are not the leader you send to the leader a broadcast message with the tcp port you have  
         else:
-            self.leaderserver_to_server_socket.bind((self.server_ip, 0))
             self.s_broadcast(6060,f"CONN:{self.leaderserver_to_server_socket.getsockname()[1]}")
-            threading.Thread(target=self.serverlisten).start()
 
 # _________________________________________________________________________________________
 
@@ -147,13 +151,13 @@ class Server:
             thread = threading.Thread(target=self.handle_client, args=(conn, addr))      
             thread.start()
 # _________________________________________________________________________________________
-#  server listen from othger servers
+#  server listen from other servers
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         while True:
             conn, addr = self.leaderserver_to_server_socket.accept()
-            self.number_servers=self.number_servers+1
             self.server_dic.append(f"{conn.getpeername()[0]}:{conn.getpeername()[1]}")
+            self.number_servers=len(self.server_dic)
             print(addr)
             thread = threading.Thread(target=self.server_recv, args=(conn, addr))      
             thread.start()
@@ -165,10 +169,10 @@ class Server:
             if not(message=="CHECK"):
                 message=pickle.loads(message)
                 self.chat_rooms=message[0]
-                self.server_dic=self.server_dic.extend(message[1])
-                self.number_servers=len(self.server_dic)+1
+                self.server_dic=message[1]
+                self.number_servers=len(self.server_dic)
                 if message:
-                   print(self.chat_rooms,self.number_servers,self.server_dic)
+                   print(f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers}")
 
 # _________________________________________________________________________________________
     def broadStart(self):
@@ -248,7 +252,7 @@ class Server:
                     connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
                     to_send = pickle.dumps([self.chat_rooms,self.server_dic]) 
                     self.server_dic.append(f"{connect_to_server_socket.getpeername()[0]}:{connect_to_server_socket.getpeername()[1]}")
-                    self.number_servers= self.number_servers+1     
+                    self.number_servers= len(self.server_dic)   
                     connect_to_server_socket.send(to_send) # sending here the chat room replica to the new connected server
                     continue
 
@@ -260,8 +264,8 @@ class Server:
         broadthread.start()
         thread.start()
 # _________________________________________________________________________________________
-
-    def form_ring(self):
+#  For leader election                                                                     
+    def form_ring(self):                                                                   
         print("before"+self.server_dic)
 
         ports=[member.split(":")[1] for member in self.server_dic]
@@ -270,6 +274,23 @@ class Server:
         self.server_dic=[f"{ip}:{port}" for _,ip,port in sorted(zip(index, ips,ports))]
         print("after"+self.server_dic)
         print("RingFormed")
+
+    def get_neighbour(self, direction='left'):
+        tobeindexed=f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
+        current_node_index = self.server_dic.index(tobeindexed) if tobeindexed in self.server_dic else -1
+        if current_node_index != -1:
+            if direction == 'left':
+                if current_node_index + 1 == len(self.server_dic):
+                    return self.server_dic[0]
+                else:
+                    return self.server_dic[current_node_index + 1]
+            else:
+                if current_node_index == 0:
+                    return self.server_dic[len(self.server_dic) - 1]
+                else:
+                    return self.server_dic[current_node_index - 1]
+        else:
+            return None
 
 
 def main(is_leader,port):
