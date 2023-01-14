@@ -191,13 +191,12 @@ class Server:
             messagelen = conn.recv(64)
             try:
                 messagelen=pickle.loads(messagelen)
-                message=conn.recv(len(messagelen))
+                message=conn.recv(messagelen)
             except:    
                 message=conn.recv(len(messagelen.decode(self.FORMAT)))
             print("the message received is ", message)
             if len(message) > 0:
                 try:
-                    message=pickle.loads(message)
                     message = pickle.loads(message)
                     self.chat_rooms = message[0]
                     self.server_dic = message[1]
@@ -261,7 +260,7 @@ class Server:
                     time.sleep(2)
                     try:
                         message_to_send=f"HEARTBEAT:{self.leaderserver_to_server_socket.getsockname()[1]}"
-                        connect_to_server_socket.send(b' '*(self.HEADER-len(str(len(message_to_send)).encode(self.FORMAT))))
+                        connect_to_server_socket.send(message_to_send.encode(self.FORMAT)+b' '*(self.HEADER-len(str(len(message_to_send)).encode(self.FORMAT))))
                         connect_to_server_socket.send(message_to_send.encode(self.FORMAT))
                     # maybe we'll start leader election here
                     except:
@@ -390,9 +389,8 @@ class Server:
                 connect_to_server_socket.connect((ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
                 print("sending to Server",ip_port)
-                to_send_len= len(to_send)
-                Str += b' '*(self.HEADER-len(to_send_len))
-                connect_to_server_socket.send(Str)
+                to_send_len= pickle.dumps(len(to_send))
+                connect_to_server_socket.send(to_send_len)
                 connect_to_server_socket.send(to_send)
 
 
