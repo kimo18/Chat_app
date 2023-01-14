@@ -20,11 +20,12 @@ class Server:
     BROADCASTADDR=(server_ip,5972)
     SERVERSERVERADDR=(server_ip,6060)
     max_connections = 0
-    server_dic={}
+    server_dic=[]
     current_connections = 0
     number_servers=1
     chat_rooms=[]
     all_connected_client={}
+    Ring=[]
 
 # Intializing broadcast server to listen from other componenets
     broadcast_server_socket=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -146,23 +147,28 @@ class Server:
             thread = threading.Thread(target=self.handle_client, args=(conn, addr))      
             thread.start()
 # _________________________________________________________________________________________
+#  server listen from othger servers
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         while True:
             conn, addr = self.leaderserver_to_server_socket.accept()
+            self.number_servers=self.number_servers+1
+            self.server_dic.append(f"{conn.getpeername()[0]}:{conn.getpeername()[1]}")
             print(addr)
             thread = threading.Thread(target=self.server_recv, args=(conn, addr))      
             thread.start()
 # _________________________________________________________________________________________
+#  server receive from other server 
     def server_recv(self, conn, addr):
         while True:
             message = conn.recv(4096)
-            message=pickle.loads(message)
-            self.server_dic=message[0]
-            self.number_servers=message[1]
-            self.chat_rooms=message[2]
-            if message:
-                print(self.chat_rooms,self.number_servers,self.server_dic)
+            if not(message=="CHECK"):
+                message=pickle.loads(message)
+                self.chat_rooms=message[0]
+                self.server_dic=self.server_dic.extend(message[1])
+                self.number_servers=len(self.server_dic)+1
+                if message:
+                   print(self.chat_rooms,self.number_servers,self.server_dic)
 
 # _________________________________________________________________________________________
     def broadStart(self):
@@ -195,7 +201,15 @@ class Server:
             # SendRoomsThread.start()
             self.SendRooms(int(message),addr,Type)
 # _________________________________________________________________________________________
+# Connect from non leader server to other non leader server so they all have same Server dic with the right conn
+    def connect_to_servers(self,ip,port):
 
+
+        connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        connect_to_server_socket.connect((ip,port))
+        
+
+# _________________________________________________________________________________________
     def SendRooms(self,ConnNumber,addr,Type):
         print(addr)
         if  ConnNumber and Type:
@@ -210,30 +224,32 @@ class Server:
                 self.all_connected_client[ConnNumber][1].send(str("If you want to create a Chat Room for you you can also create one by /CREATE").encode(self.FORMAT))
 
 # _________________________________________________________________________________________
-
+# server broadcast to other server
     def s_broadcast(self,port,message):
 
         MESSAGE = message+","+"Server"
         self.server_server_socket.sendto(MESSAGE.encode(self.FORMAT), ("255.255.255.255", port))
 # _________________________________________________________________________________________
-
+# send to other server info
     def ServerBroadListen(self):
         print(f"[LISTENING] Server is listening brodcasts from Servers on {self.SERVERSERVERADDR}")
         while True:
             message, addr = self.server_server_socket.recvfrom(self.HEADER)
             message= message.decode(self.FORMAT)
             message,Type= message.split(",")[0],message.split(",")[1]
-            print(message,"kofta")
+            # check if the broadcasted message is not in the server dic
+            if  not(f"{addr[0]}:{int(message.split(':')[1])}" in self.server_dic):
+                self.form_ring()
+
             if len(message.split(":"))==2:
 
                 if message.split(":")[0]=="CONN":
                     connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
                     connect_to_server_socket.connect((addr[0],int(message.split(":")[1])))
-                    self.server_dic[connect_to_server_socket.getsockname()[1]]=[connect_to_server_socket.getpeername()[0],connect_to_server_socket.getpeername()[1],connect_to_server_socket.getsockname()[0]]
+                    to_send = pickle.dumps([self.chat_rooms,self.server_dic]) 
+                    self.server_dic.append(f"{connect_to_server_socket.getpeername()[0]}:{connect_to_server_socket.getpeername()[1]}")
                     self.number_servers= self.number_servers+1     
-                    to_send = pickle.dumps([self.server_dic,self.number_servers,self.chat_rooms]) #self.all_connected_client
-                    connect_to_server_socket.send(to_send)
+                    connect_to_server_socket.send(to_send) # sending here the chat room replica to the new connected server
                     continue
 
 # _________________________________________________________________________________________
@@ -244,6 +260,17 @@ class Server:
         broadthread.start()
         thread.start()
 # _________________________________________________________________________________________
+
+    def form_ring(self):
+        print("before"+self.server_dic)
+
+        ports=[member.split(":")[1] for member in self.server_dic]
+        ips=[socket.inet_aton(member.split(":")[0]) for member in self.server_dic]
+        index=[i[0] for i in sorted(enumerate(ips), key=lambda x:x[1])]
+        self.server_dic=[f"{ip}:{port}" for _,ip,port in sorted(zip(index, ips,ports))]
+        print("after"+self.server_dic)
+        print("RingFormed")
+
 
 def main(is_leader,port):
     our_server= Server(is_leader,port)
