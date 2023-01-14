@@ -23,7 +23,7 @@ class Server:
     chat_rooms=[]
     all_connected_client={}
     Ring=[]
-
+    leaderIP=""
 # Intializing broadcast server to listen from other componenets
     broadcast_server_socket=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     broadcast_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -51,6 +51,7 @@ class Server:
 
         # if you are the leader then you listen for the broadcasted messages from the other server
         if self.is_leader:
+            self.leaderIP=f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
             self.server_server_socket.bind(self.SERVERSERVERADDR)
             threading.Thread(target=self.ServerBroadListen).start()
             
@@ -169,9 +170,10 @@ class Server:
                     message=pickle.loads(message)
                     self.chat_rooms=message[0]
                     self.server_dic=message[1]
+                    self.leaderIP=message[2]
                     self.number_servers=len(self.server_dic)
                     if message:
-                        print(f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers}")
+                        print(f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
 
 # _________________________________________________________________________________________
     def broadStart(self):
@@ -253,7 +255,7 @@ class Server:
                         if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}" ):
                             connect_to_server_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             connect_to_server_socket.connect((ip_port.split(":")[0],int(ip_port.split(":")[1])))
-                            to_send = pickle.dumps([self.chat_rooms,self.server_dic])                    
+                            to_send = pickle.dumps([self.chat_rooms,self.server_dic,self.leaderIP])                    
                             print("to send",len(to_send))
                             connect_to_server_socket.send(to_send) # sending here the chat room replica to the new connected server
                     continue
@@ -293,6 +295,8 @@ class Server:
                     return self.server_dic[current_node_index - 1]
         else:
             return None
+    def detect_crash(self):
+        print("hahahahah")
 
 
 def main(is_leader,port):
