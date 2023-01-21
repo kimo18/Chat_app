@@ -41,6 +41,7 @@ def send(msg):
     # print(client.recv(64).decode(FORMAT))
 
 def NormReceiver(LserverIP,conn):
+    global serverdown
     global client
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((LserverIP,5050))
@@ -48,17 +49,20 @@ def NormReceiver(LserverIP,conn):
 
     global FT
     while True:
-        try:
-            conn.timeout(0.5)
-        except:
-            if serverdown:
-                print ("server dowwwwwwwwn")
-                FT=True
-                break   
+        
+        conn.settimeout(1)
+        if serverdown:
+            print ("server dowwwwwwwwn")
+            FT=True
+            break  
+      
+             
 
         if not(FT):
             try:
-                print(conn.recv(64).decode(FORMAT),"\n BTSSSSSSSSSSSS")
+                msg = conn.recv(64).decode(FORMAT)
+                if len (msg) > 0:
+                    print(msg,"\n")
             except:
                 if serverdown:
                     print ("server dowwwwwwwwn")
@@ -93,7 +97,6 @@ def GetServerIP():
 
         # START HERE TO listen from messeages coming from tcp Side
         if not(started) and not serverdown:
-            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
             Recthread= threading.Thread(target=NormReceiver,args=(LServerIP[0],conn))
             Recthread.start()
             started =True
