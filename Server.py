@@ -74,7 +74,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
 
@@ -155,7 +154,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def RoomSearch(self, chatroom_name):
         for x in self.chat_rooms:
             if x.name == chatroom_name:
@@ -164,7 +162,6 @@ class Server:
 
 
 # _________________________________________________________________________________________
-
 
     def start(self):
         self.server_tolisten_socket.listen()
@@ -183,7 +180,6 @@ class Server:
 # _________________________________________________________________________________________
 #  server listen from other servers
 
-
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",
@@ -199,7 +195,6 @@ class Server:
 
 # _________________________________________________________________________________________
 #  server receive from other server
-
 
     def server_recv(self, conn, addr):
         while True:
@@ -229,6 +224,7 @@ class Server:
                             print(
                                 f" this is the chat rooms{self.chat_rooms} \n [LIST OF SERVERS: ] {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
                     else:
+                        print("inside else for forward election msg")
                         self.forward_election_message(message)
 
                 except:
@@ -279,7 +275,6 @@ class Server:
 
 # Send heartbeat message from servers to leader server
 
-
     def send_heartbeat_message(self):
         recevied = False
         while not recevied:
@@ -307,11 +302,13 @@ class Server:
                     print("DICTIONARY", self.server_dic)
                     self.server_dic.remove(self.leaderIP)
                     self.leaderIP = None
+                    time.sleep(1)
                     print(":x: :x: LEADER SERVER CRASHED :x: :x:")
                     self.start_election()
 
 
 # _________________________________________________________________________________________
+
 
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
@@ -335,7 +332,6 @@ class Server:
 # _________________________________________________________________________________________
 # server broadcast to other server
 
-
     def s_broadcast(self, port, message):
 
         MESSAGE = message+","+"Server"
@@ -345,6 +341,7 @@ class Server:
 
 # _________________________________________________________________________________________
 # send to other server info
+
 
     def ServerBroadListen(self):
         print(
@@ -378,6 +375,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def begin(self):
         thread = threading.Thread(target=self.start)
         broadthread = threading.Thread(target=self.start_broadcast)
@@ -388,7 +386,6 @@ class Server:
 #######################
 # For leader election #
 #######################
-
 
     def form_ring(self):
         print("before", self.server_dic)
@@ -424,6 +421,7 @@ class Server:
 # this function will be used by each node in the ring to start the election
 # a node will construct its election msg and then pass it down to its neighbour
 
+
     def start_election(self):
         print("Leader election started..........")
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -437,8 +435,8 @@ class Server:
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, port))
         to_send_len = json.dumps(len(message))
-        print("message dumps is: ", json.dumps(message))
-        print("message loads is: ", json.loads(message))
+        print("start election, message dumps is: ", json.dumps(message))
+        print("start election, message loads is: ", json.loads(message))
         print("LENGTH IS: ", len(message))
         ring_socket.send(to_send_len.encode(self.FORMAT))
         ring_socket.send(message.encode(self.FORMAT))
@@ -453,6 +451,7 @@ class Server:
 # a node receives an election msg with its own pid,
     # it understands that it has become the new leader and hence sends out a broadcast msg to notify all nodes
 
+
     def forward_election_message(self, neighbour_msg):
         print("Forwarding [ELECTION MESSAGE]...........")
 
@@ -461,7 +460,7 @@ class Server:
 
         # creating a TCP socket to be used for passing election msgs around the ring
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ring_socket.connect((ip, port))
+        ring_socket.connect((ip, int(port)))
 
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
@@ -474,7 +473,7 @@ class Server:
                 "is_Leader": False
             }
             self.participant = True
-            to_send_len = len(json.dumps(new_election_message))
+            to_send_len = json.dumps(len(json.dumps(new_election_message)))
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 new_election_message).encode(self.FORMAT))
@@ -482,7 +481,7 @@ class Server:
         elif neighbour_msg['PID'] > current_node_index and not self.participant:
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
-            to_send_len = len(json.dumps(neighbour_msg))
+            to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 neighbour_msg).encode(self.FORMAT))
@@ -500,7 +499,7 @@ class Server:
             # mark self as no longer a participant and send new election message to left neighbour
             self.participant = False
             self.leaderIP = self.server_ip
-            to_send_len = len(json.dumps(new_election_message))
+            to_send_len = json.dumps(len(json.dumps(new_election_message)))
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 new_election_message).encode(self.FORMAT))
