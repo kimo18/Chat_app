@@ -5,6 +5,7 @@ import sys
 from ChatRoom import ChatRoom
 import time
 import json
+import emoji
 
 
 class Server:
@@ -303,7 +304,7 @@ class Server:
                     self.server_dic.remove(self.leaderIP)
                     self.leaderIP = None
                     time.sleep(1)
-                    print(":x: :x: LEADER SERVER CRASHED :x: :x:")
+                    print(emoji.emojize(":x: :x: LEADER SERVER CRASHED :x: :x:"))
                     self.start_election()
 
 
@@ -493,9 +494,11 @@ class Server:
             # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
             if neighbour_msg['is_Leader'] == True:
                 self.is_leader = True
+                print(emoji.emojize(
+                    "I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:"))
 
-            print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
             new_election_message = {
+                "Type": "ELECT",
                 "PID": current_node_index,
                 "is_Leader": True
             }
