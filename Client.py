@@ -50,7 +50,7 @@ def NormReceiver(LserverIP,conn):
     global FT
     while True:
         
-        conn.settimeout(1)
+        client.settimeout(1)
         if serverdown:
             print ("server dowwwwwwwwn")
             FT=True
@@ -60,7 +60,7 @@ def NormReceiver(LserverIP,conn):
 
         if not(FT):
             try:
-                msg = conn.recv(64).decode(FORMAT)
+                msg = client.recv(64).decode(FORMAT)
                 if len (msg) > 0:
                     print(msg,"\n")
             except:
@@ -72,13 +72,13 @@ def NormReceiver(LserverIP,conn):
             print(FT)
             global Socketconn
             try:
-                Socketconn= conn.recv(64).decode(FORMAT)    
+                Socketconn= client.recv(64).decode(FORMAT)    
             except:
                 if serverdown:
                     print ("server dowwwwwwwwn")
                     FT=True
                     break     
-            print(Socketconn)  
+            print("THIS IS THE SOCK NUM",Socketconn)  
             FT=False 
 
 # WHEN THE SOCKET RECEVIES THE IP FROM THE SERVER IT CONNECT WITH THE SERVER TCP

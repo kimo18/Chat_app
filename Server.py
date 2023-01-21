@@ -5,7 +5,7 @@ import sys
 from ChatRoom import ChatRoom
 import time
 import json
-import emoji
+# import emoji
 
 
 class Server:
@@ -314,7 +314,7 @@ class Server:
                     self.server_dic.remove(self.leaderIP)
                     self.leaderIP = None
                     time.sleep(1)
-                    print(emoji.emojize(":x: :x: LEADER SERVER CRASHED :x: :x:"))
+                    print(":x: :x: LEADER SERVER CRASHED :x: :x:")
                     self.start_election()
 
 
