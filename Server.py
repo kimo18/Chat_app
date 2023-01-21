@@ -39,6 +39,10 @@ class Server:
 
     server_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+
+    connect_to_server_socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
+
     # server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 # Intializing TCP Server to listen from Clients messages
@@ -225,7 +229,7 @@ class Server:
                                 f" this is the chat rooms{self.chat_rooms} \n [LIST OF SERVERS: ] {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
                     else:
                         print("inside else for forward election msg")
-                        self.forward_election_message(message)
+                        threading.Thread(target=self.forward_election_message, args=[message,]).start()
 
                 except:
                     # change the server's hp to 'True' when the leader server receives the hearbeat
@@ -283,18 +287,18 @@ class Server:
 
         leader_IP, leader_port = self.leaderIP.split(
             ":")[0], int(self.leaderIP.split(":")[1])
-        connect_to_server_socket = socket.socket(
+        self.connect_to_server_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
-        connect_to_server_socket.connect((leader_IP, leader_port))
+        self.connect_to_server_socket.connect((leader_IP, leader_port))
 
         while True:
             if not self.is_leader and self.leaderIP:
                 time.sleep(2)
                 try:
                     message_to_send = f"HEARTBEAT:{self.leaderserver_to_server_socket.getsockname()[1]}"
-                    connect_to_server_socket.send(str(len(message_to_send)).encode(
+                    self.connect_to_server_socket.send(str(len(message_to_send)).encode(
                         self.FORMAT)+b' '*(self.HEADER-len(str(len(message_to_send)).encode(self.FORMAT))))
-                    connect_to_server_socket.send(
+                    self.connect_to_server_socket.send(
                         message_to_send.encode(self.FORMAT))
                 # maybe we'll start leader election here
                 except:
@@ -428,12 +432,13 @@ class Server:
         current_node_index = self.server_dic.index(current_node)
         message = {"Type": "ELECT",
                    "PID": current_node_index,
-                   "is_leader": False}
+                   "is_Leader": False}
         message = json.dumps(message)
         neighbour = self.get_neighbour()
         ip, port = neighbour.split(":")[0], int(neighbour.split(":")[1])
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, port))
+        time.sleep(1)
         to_send_len = json.dumps(len(message))
         print("start election, message dumps is: ", json.dumps(message))
         print("start election, message loads is: ", json.loads(message))
@@ -453,22 +458,27 @@ class Server:
 
 
     def forward_election_message(self, neighbour_msg):
-        print("Forwarding [ELECTION MESSAGE]...........")
 
+        print("Forwarding [ELECTION MESSAGE]...........")
+        time.sleep(2)
         neighbour = self.get_neighbour()
         ip, port = neighbour.split(':')[0], neighbour.split(":")[1]
         print(f"this is my neighbour {ip}  {port}")
         # creating a TCP socket to be used for passing election msgs around the ring
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, int(port)))
-        ring_socket.connect((ip, int(port)))
 
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
-
+        print("btssssssssssssssssssssssssssss", neighbour_msg['is_Leader'])
         if neighbour_msg['is_Leader']  and  not(neighbour_msg['PID'] == current_node_index):
             self.participant=False
             self.leaderIP=self.server_dic[neighbour_msg['PID']]
+
+            leader_IP, leader_port = self.leaderIP.split( ":")[0], int(self.leaderIP.split(":")[1])
+            self.connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connect_to_server_socket.connect((leader_IP, leader_port))
+
             to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(neighbour_msg).encode(self.FORMAT))
@@ -477,6 +487,7 @@ class Server:
             # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
             if neighbour_msg['is_Leader'] == True:
                 self.is_leader = True
+                self.leaderIP = self.server_ip
                 print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
                 return
             else:
@@ -488,17 +499,17 @@ class Server:
                 }
                 # mark self as no longer a participant and send new election message to left neighbour
                 self.participant = False
-                self.leaderIP = self.server_ip
+               
                 to_send_len = json.dumps(len(json.dumps(new_election_message)))
                 ring_socket.send(to_send_len.encode(self.FORMAT))
                 ring_socket.send(json.dumps(
                     new_election_message).encode(self.FORMAT))
 
-        elif self.participant:   
-            to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
-            ring_socket.send(to_send_len.encode(self.FORMAT))
-            ring_socket.send(json.dumps(
-                neighbour_msg).encode(self.FORMAT))     
+        # elif self.participant:   
+        #     to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
+        #     ring_socket.send(to_send_len.encode(self.FORMAT))
+        #     ring_socket.send(json.dumps(
+        #         neighbour_msg).encode(self.FORMAT))     
 
         elif neighbour_msg['PID'] < current_node_index:
             # update msg with own PID & set self as participant
