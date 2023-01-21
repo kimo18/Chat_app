@@ -297,6 +297,7 @@ class Server:
                 except:
                     self.server_dic.remove(self.leaderIP)
                     self.leaderIP=None
+                    time.sleep(1)
                     print(":x: :x: LEADER SERVER CRASHED :x: :x:")
                     self.start_election()
 
@@ -450,7 +451,7 @@ class Server:
 
         # creating a TCP socket to be used for passing election msgs around the ring
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ring_socket.connect((ip, port))
+        ring_socket.connect((ip, int(port)))
 
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
@@ -463,14 +464,14 @@ class Server:
                 "is_Leader": False
             }
             self.participant = True
-            to_send_len = len(json.dumps(new_election_message))
+            to_send_len = json.dumps(len(json.dumps(new_election_message)))
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(new_election_message).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] > current_node_index and not self.participant:
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
-            to_send_len = len(json.dumps(neighbour_msg))
+            to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 neighbour_msg).encode(self.FORMAT))
@@ -488,7 +489,7 @@ class Server:
             # mark self as no longer a participant and send new election message to left neighbour
             self.participant = False
             self.leaderIP = self.server_ip
-            to_send_len = len(json.dumps(new_election_message))
+            to_send_len = json.dumps(len(json.dumps(new_election_message)))
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 new_election_message).encode(self.FORMAT))
