@@ -74,6 +74,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
 
@@ -154,6 +155,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def RoomSearch(self, chatroom_name):
         for x in self.chat_rooms:
             if x.name == chatroom_name:
@@ -162,6 +164,7 @@ class Server:
 
 
 # _________________________________________________________________________________________
+
 
     def start(self):
         self.server_tolisten_socket.listen()
@@ -180,6 +183,7 @@ class Server:
 # _________________________________________________________________________________________
 #  server listen from other servers
 
+
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",
@@ -196,12 +200,13 @@ class Server:
 # _________________________________________________________________________________________
 #  server receive from other server
 
+
     def server_recv(self, conn, addr):
         while True:
             messagelen = conn.recv(64)
             message = ""
             try:
-                messagelen = json.loads(messagelen.decode())
+                messagelen = json.loads(messagelen.decode(self.FORMAT))
                 message = conn.recv(messagelen)
                 print("msg len in recv: ", messagelen)
                 print("msg in recv: ", message)
@@ -211,7 +216,7 @@ class Server:
 
             if len(message) > 0:
                 try:
-                    message = json.loads(message.decode())
+                    message = json.loads(message.decode(self.FORMAT))
                     print("pickled")
                     print('message content: ', message)
 
@@ -274,6 +279,7 @@ class Server:
 
 # Send heartbeat message from servers to leader server
 
+
     def send_heartbeat_message(self):
         recevied = False
         while not recevied:
@@ -307,7 +313,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
         if ConnNumber and Type:
@@ -330,6 +335,7 @@ class Server:
 # _________________________________________________________________________________________
 # server broadcast to other server
 
+
     def s_broadcast(self, port, message):
 
         MESSAGE = message+","+"Server"
@@ -339,7 +345,6 @@ class Server:
 
 # _________________________________________________________________________________________
 # send to other server info
-
 
     def ServerBroadListen(self):
         print(
@@ -362,14 +367,16 @@ class Server:
 
                 if message.split(":")[0] == "CONN":
 
-                    to_send = json.dumps(
-                        [self.chat_rooms, self.server_dic, self.leaderIP])
-                    self.send_updates(to_send)
-                    print("to send", len(to_send))
+                    replica = {
+                        "chat_rooms": self.chat_rooms,
+                        "servers_list": self.server_dic,
+                        "leader_IP": self.leaderIP
+                    }
+                    self.send_updates(json.dumps(replica))
+                    print("to send", len(replica))
 
 
 # _________________________________________________________________________________________
-
 
     def begin(self):
         thread = threading.Thread(target=self.start)
@@ -381,6 +388,7 @@ class Server:
 #######################
 # For leader election #
 #######################
+
 
     def form_ring(self):
         print("before", self.server_dic)
@@ -416,7 +424,6 @@ class Server:
 # this function will be used by each node in the ring to start the election
 # a node will construct its election msg and then pass it down to its neighbour
 
-
     def start_election(self):
         print("Leader election started..........")
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -446,7 +453,6 @@ class Server:
 # a node receives an election msg with its own pid,
     # it understands that it has become the new leader and hence sends out a broadcast msg to notify all nodes
 
-
     def forward_election_message(self, neighbour_msg):
         print("Forwarding [ELECTION MESSAGE]...........")
 
@@ -469,7 +475,7 @@ class Server:
             }
             self.participant = True
             to_send_len = len(json.dumps(new_election_message))
-            ring_socket.send(to_send_len)
+            ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 new_election_message).encode(self.FORMAT))
 
@@ -477,7 +483,7 @@ class Server:
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
             to_send_len = len(json.dumps(neighbour_msg))
-            ring_socket.send(to_send_len)
+            ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 neighbour_msg).encode(self.FORMAT))
 
@@ -495,7 +501,7 @@ class Server:
             self.participant = False
             self.leaderIP = self.server_ip
             to_send_len = len(json.dumps(new_election_message))
-            ring_socket.send(to_send_len)
+            ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 new_election_message).encode(self.FORMAT))
 
@@ -518,6 +524,7 @@ class Server:
                         "leader_IP": self.leaderIP
                     }
                     self.send_updates(json.dumps(replica))
+                    self.send_updates(json.dumps(replica))
 
                 else:
                     self.server_hp[i] = (ip[0], False)
@@ -533,6 +540,9 @@ class Server:
                     (ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
                 print("sending to Server", ip_port)
+                to_send_len = json.dumps(len(to_send))
+                connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
+                connect_to_server_socket.send(to_send.encode(self.FORMAT))
                 to_send_len = json.dumps(len(to_send))
                 connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
                 connect_to_server_socket.send(to_send.encode(self.FORMAT))
