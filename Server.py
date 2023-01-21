@@ -73,6 +73,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
 
@@ -153,6 +154,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def RoomSearch(self, chatroom_name):
         for x in self.chat_rooms:
             if x.name == chatroom_name:
@@ -161,6 +163,7 @@ class Server:
 
 
 # _________________________________________________________________________________________
+
 
     def start(self):
         self.server_tolisten_socket.listen()
@@ -179,6 +182,7 @@ class Server:
 # _________________________________________________________________________________________
 #  server listen from other servers
 
+
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",
@@ -194,6 +198,7 @@ class Server:
 
 # _________________________________________________________________________________________
 #  server receive from other server
+
 
     def server_recv(self, conn, addr):
         while True:
@@ -211,14 +216,16 @@ class Server:
                     message = pickle.loads(message)
                     print("pickled")
 
-                    if not message['TYPE'] == 'ELECT':
-                        self.chat_rooms = message[0]
-                        self.server_dic = message[1]
-                        self.leaderIP = message[2]
+                    if ['TYPE'] not in message.items():
+                        self.chat_rooms = message['chat_rooms']
+                        self.server_dic = message['servers_list']
+                        self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
                         if message:
                             print(
                                 f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
+                    else:
+                        self.forward_election_message(message)
 
                 except:
                     # change the server hp to True when the leader server receives hearbeat
@@ -295,7 +302,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
         if ConnNumber and Type:
@@ -318,6 +324,7 @@ class Server:
 # _________________________________________________________________________________________
 # server broadcast to other server
 
+
     def s_broadcast(self, port, message):
 
         MESSAGE = message+","+"Server"
@@ -327,7 +334,6 @@ class Server:
 
 # _________________________________________________________________________________________
 # send to other server info
-
 
     def ServerBroadListen(self):
         print(
@@ -358,7 +364,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def begin(self):
         thread = threading.Thread(target=self.start)
         broadthread = threading.Thread(target=self.broadStart)
@@ -369,6 +374,7 @@ class Server:
 #######################
 # For leader election #
 #######################
+
 
     def form_ring(self):
         print("before", self.server_dic)
@@ -404,7 +410,6 @@ class Server:
 # this function will be used by each node in the ring to start the election
 # a node will construct its election msg and then pass it down to its neighbour
 
-
     def start_election(self):
         print("Leader election started..........")
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -430,7 +435,6 @@ class Server:
     # it passes the msg down to the next node without updating the pid and marks itself as participant
 # a node receives an election msg with its own pid,
     # it understands that it has become the new leader and hence sends out a broadcast msg to notify all nodes
-
 
     def forward_election_message(self, neighbour_msg):
         print("Forwarding [ELECTION MESSAGE]...........")
