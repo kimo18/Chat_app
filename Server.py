@@ -75,6 +75,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
 
@@ -155,6 +156,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def RoomSearch(self, chatroom_name):
         for x in self.chat_rooms:
             if x.name == chatroom_name:
@@ -163,6 +165,7 @@ class Server:
 
 
 # _________________________________________________________________________________________
+
 
     def start(self):
         self.server_tolisten_socket.listen()
@@ -181,6 +184,7 @@ class Server:
 # _________________________________________________________________________________________
 #  server listen from other servers
 
+
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",
@@ -196,6 +200,7 @@ class Server:
 
 # _________________________________________________________________________________________
 #  server receive from other server
+
 
     def server_recv(self, conn, addr):
         while True:
@@ -276,6 +281,7 @@ class Server:
 
 # Send heartbeat message from servers to leader server
 
+
     def send_heartbeat_message(self):
         recevied = False
         while not recevied:
@@ -310,7 +316,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
         if ConnNumber and Type:
@@ -333,6 +338,7 @@ class Server:
 # _________________________________________________________________________________________
 # server broadcast to other server
 
+
     def s_broadcast(self, port, message):
 
         MESSAGE = message+","+"Server"
@@ -342,7 +348,6 @@ class Server:
 
 # _________________________________________________________________________________________
 # send to other server info
-
 
     def ServerBroadListen(self):
         print(
@@ -376,7 +381,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def begin(self):
         thread = threading.Thread(target=self.start)
         broadthread = threading.Thread(target=self.start_broadcast)
@@ -387,6 +391,7 @@ class Server:
 #######################
 # For leader election #
 #######################
+
 
     def form_ring(self):
         print("before", self.server_dic)
@@ -422,7 +427,6 @@ class Server:
 # this function will be used by each node in the ring to start the election
 # a node will construct its election msg and then pass it down to its neighbour
 
-
     def start_election(self):
         print("Leader election started..........")
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -452,13 +456,12 @@ class Server:
 # a node receives an election msg with its own pid,
     # it understands that it has become the new leader and hence sends out a broadcast msg to notify all nodes
 
-
     def forward_election_message(self, neighbour_msg):
         print("Forwarding [ELECTION MESSAGE]...........")
 
         neighbour = self.get_neighbour()
         ip, port = neighbour.split(':')[0], neighbour.split(":")[1]
-
+        print(f"this is my neighbour {ip}  {port}")
         # creating a TCP socket to be used for passing election msgs around the ring
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, int(port)))
@@ -467,7 +470,41 @@ class Server:
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
 
-        if neighbour_msg['PID'] < current_node_index and not self.participant:
+        if neighbour_msg['is_Leader'] and not (neighbour_msg['PID'] == current_node_index):
+            self.participant = False
+            self.leaderIP = self.server_dic[neighbour_msg['PID']]
+            to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
+            ring_socket.send(to_send_len.encode(self.FORMAT))
+            ring_socket.send(json.dumps(neighbour_msg).encode(self.FORMAT))
+
+        elif neighbour_msg['PID'] == current_node_index:
+            # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
+            if neighbour_msg['is_Leader'] == True:
+                self.is_leader = True
+                print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
+                return
+            else:
+                print("received my OWN ID")
+                new_election_message = {
+                    "Type": "ELECT",
+                    "PID": current_node_index,
+                    "is_Leader": True
+                }
+                # mark self as no longer a participant and send new election message to left neighbour
+                self.participant = False
+                self.leaderIP = self.server_ip
+                to_send_len = json.dumps(len(json.dumps(new_election_message)))
+                ring_socket.send(to_send_len.encode(self.FORMAT))
+                ring_socket.send(json.dumps(
+                    new_election_message).encode(self.FORMAT))
+
+        elif self.participant:
+            to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
+            ring_socket.send(to_send_len.encode(self.FORMAT))
+            ring_socket.send(json.dumps(
+                neighbour_msg).encode(self.FORMAT))
+
+        elif neighbour_msg['PID'] < current_node_index:
             # update msg with own PID & set self as participant
             new_election_message = {
                 "Type": "ELECT",
@@ -481,7 +518,8 @@ class Server:
             ring_socket.send(json.dumps(
                 new_election_message).encode(self.FORMAT))
 
-        elif neighbour_msg['PID'] > current_node_index and not self.participant:
+        elif neighbour_msg['PID'] > current_node_index:
+            print("PID is bigger than mine")
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
             to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
@@ -489,27 +527,6 @@ class Server:
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(
                 neighbour_msg).encode(self.FORMAT))
-
-        elif neighbour_msg['PID'] == current_node_index:
-            # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
-            if neighbour_msg['is_Leader'] == True:
-                self.is_leader = True
-                print(emoji.emojize(
-                    "I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:"))
-
-            new_election_message = {
-                "Type": "ELECT",
-                "PID": current_node_index,
-                "is_Leader": True
-            }
-            # mark self as no longer a participant and send new election message to left neighbour
-            self.participant = False
-            self.leaderIP = self.server_ip
-            to_send_len = json.dumps(len(json.dumps(new_election_message)))
-            to_send_len = json.dumps(len(json.dumps(new_election_message)))
-            ring_socket.send(to_send_len.encode(self.FORMAT))
-            ring_socket.send(json.dumps(
-                new_election_message).encode(self.FORMAT))
 
     def ttl_set_remove(self, server, ttl):
         while True:
