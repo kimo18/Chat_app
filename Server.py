@@ -422,7 +422,7 @@ class Server:
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, port))
         ring_socket.send(message)
-
+        print("3lshan 5atr sabry")
 
     def forward_election_message(self):
         print("Forwarding election message ...........")
