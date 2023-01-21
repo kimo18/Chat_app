@@ -4,7 +4,7 @@ import pickle
 import sys
 from ChatRoom import ChatRoom
 import time
-
+import json
 
 class Server:
     HEADER = 64
@@ -205,7 +205,7 @@ class Server:
             messagelen = conn.recv(64)
             message = ""
             try:
-                messagelen = pickle.loads(messagelen)
+                messagelen = json.loads(messagelen.decode(self.FORMAT) )
                 message = conn.recv(messagelen)
 
             except:
@@ -213,10 +213,10 @@ class Server:
 
             if len(message) > 0:
                 try:
-                    message = pickle.loads(message)
+                    message = json.loads(message.decode(self.FORMAT))
                     print("pickled")
 
-                    if ['TYPE'] not in message.items():
+                    if 'Type' not in message.keys():
                         self.chat_rooms = message['chat_rooms']
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
@@ -284,8 +284,8 @@ class Server:
             socket.AF_INET, socket.SOCK_STREAM)
         connect_to_server_socket.connect((leader_IP, leader_port))
 
-        while True:
-            if not self.is_leader and self.leaderIP:
+        while True :
+            if not self.is_leader and self.leaderIP :
                 time.sleep(2)
                 try:
                     message_to_send = f"HEARTBEAT:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -296,8 +296,10 @@ class Server:
                 # maybe we'll start leader election here
                 except:
                     self.server_dic.remove(self.leaderIP)
+                    self.leaderIP=None
                     print(":x: :x: LEADER SERVER CRASHED :x: :x:")
                     self.start_election()
+
 
 
 # _________________________________________________________________________________________
@@ -356,10 +358,14 @@ class Server:
 
                 if message.split(":")[0] == "CONN":
 
-                    to_send = pickle.dumps(
-                        [self.chat_rooms, self.server_dic, self.leaderIP])
-                    self.send_updates(to_send)
-                    print("to send", len(to_send))
+
+                    replica = {
+                        "chat_rooms": self.chat_rooms,
+                        "servers_list": self.server_dic,
+                        "leader_IP": self.leaderIP
+                    }
+                    self.send_updates(json.dumps(replica))
+                    print("to send", len(replica))
 
 
 # _________________________________________________________________________________________
@@ -417,14 +423,14 @@ class Server:
         message = {"Type": "ELECT",
                    "PID": node_index,
                    "is_leader": False}
-        message = pickle.dumps(message)
+        message = json.dumps(message)
         next_node = self.get_neighbour()
         ip, port = next_node.split(":")[0], int(next_node.split(":")[1])
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, port))
-        to_send_len = pickle.dumps(len(message))
-        ring_socket.send(to_send_len)
-        ring_socket.send(message)
+        to_send_len = json.dumps(len(message))
+        ring_socket.send(to_send_len.encode(self.FORMAT))
+        ring_socket.send(message.encode(self.FORMAT))
 
 
 # this function will be used by each node to forward election msgs around the ring
@@ -457,17 +463,17 @@ class Server:
                 "is_Leader": False
             }
             self.participant = True
-            to_send_len = len(pickle.dumps(new_election_message))
-            ring_socket.send(to_send_len)
-            ring_socket.send(pickle.dumps(new_election_message))
+            to_send_len = len(json.dumps(new_election_message))
+            ring_socket.send(to_send_len.encode(self.FORMAT))
+            ring_socket.send(json.dumps(new_election_message).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] > current_node_index and not self.participant:
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
-            to_send_len = len(pickle.dumps(neighbour_msg))
-            ring_socket.send(to_send_len)
-            ring_socket.send(pickle.dumps(
-                neighbour_msg))
+            to_send_len = len(json.dumps(neighbour_msg))
+            ring_socket.send(to_send_len.encode(self.FORMAT))
+            ring_socket.send(json.dumps(
+                neighbour_msg).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] == current_node_index:
             # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
@@ -482,10 +488,10 @@ class Server:
             # mark self as no longer a participant and send new election message to left neighbour
             self.participant = False
             self.leaderIP = self.server_ip
-            to_send_len = len(pickle.dumps(new_election_message))
-            ring_socket.send(to_send_len)
-            ring_socket.send(pickle.dumps(
-                new_election_message))
+            to_send_len = len(json.dumps(new_election_message))
+            ring_socket.send(to_send_len.encode(self.FORMAT))
+            ring_socket.send(json.dumps(
+                new_election_message).encode(self.FORMAT))
 
     def ttl_set_remove(self, server, ttl):
         while True:
@@ -505,7 +511,7 @@ class Server:
                         "servers_list": self.server_dic,
                         "leader_IP": self.leaderIP
                     }
-                    self.send_updates(pickle.dumps(replica))
+                    self.send_updates(json.dumps(replica))
 
                 else:
                     self.server_hp[i] = (ip[0], False)
@@ -521,9 +527,9 @@ class Server:
                     (ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
                 print("sending to Server", ip_port)
-                to_send_len = pickle.dumps(len(to_send))
-                connect_to_server_socket.send(to_send_len)
-                connect_to_server_socket.send(to_send)
+                to_send_len = json.dumps(len(to_send))
+                connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
+                connect_to_server_socket.send(to_send.encode(self.FORMAT))
 
 
 def main(is_leader, port):
