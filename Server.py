@@ -4,6 +4,7 @@ import pickle
 import sys
 from ChatRoom import ChatRoom
 import time
+import json
 
 
 class Server:
@@ -48,7 +49,7 @@ class Server:
     def __init__(self, is_leader, port=5050, max_connections=5):
         self.is_leader = is_leader == "True"
         self.port = int(port)
-        # self.broadStart()
+        # self.start_broadcast()
         self.ADDR = (self.server_ip, self.port)
         self.server_tolisten_socket.bind(self.ADDR)
         self.max_connections = max_connections
@@ -72,7 +73,6 @@ class Server:
 
 
 # _________________________________________________________________________________________
-
 
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
@@ -114,7 +114,7 @@ class Server:
                     else:
                         conn.send("Please Specify the name of the chatroom you want to create".encode(
                             self.FORMAT))
-                # CLIENT SEND A MESSAGE TO JOIN AN EXISTANT CHAT ROOMS
+                # CLIENT SEND A MESSAGE TO JOIN AN EXISTING CHAT ROOM
                 if msg[:5] == "/JOIN":
                     # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
                     if len(msg) > 6:
@@ -154,7 +154,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def RoomSearch(self, chatroom_name):
         for x in self.chat_rooms:
             if x.name == chatroom_name:
@@ -163,7 +162,6 @@ class Server:
 
 
 # _________________________________________________________________________________________
-
 
     def start(self):
         self.server_tolisten_socket.listen()
@@ -182,7 +180,6 @@ class Server:
 # _________________________________________________________________________________________
 #  server listen from other servers
 
-
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",
@@ -199,36 +196,38 @@ class Server:
 # _________________________________________________________________________________________
 #  server receive from other server
 
-
     def server_recv(self, conn, addr):
         while True:
             messagelen = conn.recv(64)
             message = ""
             try:
-                messagelen = pickle.loads(messagelen)
+                messagelen = json.loads(messagelen.decode())
                 message = conn.recv(messagelen)
+                print("msg len in recv: ", messagelen)
+                print("msg in recv: ", message)
 
             except:
                 message = conn.recv(len(messagelen.decode(self.FORMAT)))
 
             if len(message) > 0:
                 try:
-                    message = pickle.loads(message)
+                    message = json.loads(message.decode())
                     print("pickled")
+                    print('message content: ', message)
 
-                    if ['TYPE'] not in message.items():
+                    if 'Type' not in message.keys():
                         self.chat_rooms = message['chat_rooms']
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
                         if message:
                             print(
-                                f" this is the chat rooms{self.chat_rooms} \n this is the mutual server dic {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
+                                f" this is the chat rooms{self.chat_rooms} \n [LIST OF SERVERS: ] {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
                     else:
                         self.forward_election_message(message)
 
                 except:
-                    # change the server hp to True when the leader server receives hearbeat
+                    # change the server's hp to 'True' when the leader server receives the hearbeat
                     print("Iam in")
                     message = message.decode(self.FORMAT)
                     port = message.split(":")[1]
@@ -240,9 +239,9 @@ class Server:
 
                     # _________________________________________________________________________________________
 
-    def broadStart(self):
+    def start_broadcast(self):
         print(
-            f"[LISTENING] Server is listening brodcasts on {self.BROADCASTADDR}")
+            f"[LISTENING] Server is listening for brodcasts on {self.BROADCASTADDR}")
         while True:
             message, addr = self.broadcast_server_socket.recvfrom(64)
 
@@ -269,9 +268,12 @@ class Server:
             # SendRoomsThread = threading.Thread(target=SendRooms, args=(senderIP,addr,Type))
             # SendRoomsThread.start()
             self.SendRooms(int(message), addr, Type)
+
+
 # _________________________________________________________________________________________
 
 # Send heartbeat message from servers to leader server
+
     def send_heartbeat_message(self):
         recevied = False
         while not recevied:
@@ -295,35 +297,38 @@ class Server:
                         message_to_send.encode(self.FORMAT))
                 # maybe we'll start leader election here
                 except:
+                    print("LEADER IP: ", self.leaderIP)
+                    print("DICTIONARY", self.server_dic)
                     self.server_dic.remove(self.leaderIP)
+                    self.leaderIP = None
                     print(":x: :x: LEADER SERVER CRASHED :x: :x:")
                     self.start_election()
 
 
 # _________________________________________________________________________________________
 
+
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
         if ConnNumber and Type:
             print(
-                f"Sending Chat Rooms available to Client who Requested it with {addr[0]}")
+                f"Sending available chat rooms to client at address {addr[0]}")
             if len(self.chat_rooms) == 0:
                 self.all_connected_client[ConnNumber][1].send(str(
-                    "Sorry there is no Chat ROOMS , Please create one by /CREATE").encode(self.FORMAT))
+                    "Sorry, no chat rooms available, please create one by /CREATE").encode(self.FORMAT))
             else:
                 self.all_connected_client[ConnNumber][1].send(
-                    str("Here are the available Rooms \n").encode(self.FORMAT))
+                    str("Here are the available chat rooms \n").encode(self.FORMAT))
                 for x in self.chat_rooms:
                     message = x.name+"," + x.server_on+"\n"
                     self.all_connected_client[ConnNumber][1].send(
                         message.encode(self.FORMAT))
                 self.all_connected_client[ConnNumber][1].send(str(
-                    "If you want to create a Chat Room for you you can also create one by /CREATE").encode(self.FORMAT))
+                    "If you want to create a chat room, you can by /CREATE").encode(self.FORMAT))
 
 
 # _________________________________________________________________________________________
 # server broadcast to other server
-
 
     def s_broadcast(self, port, message):
 
@@ -334,6 +339,7 @@ class Server:
 
 # _________________________________________________________________________________________
 # send to other server info
+
 
     def ServerBroadListen(self):
         print(
@@ -356,7 +362,7 @@ class Server:
 
                 if message.split(":")[0] == "CONN":
 
-                    to_send = pickle.dumps(
+                    to_send = json.dumps(
                         [self.chat_rooms, self.server_dic, self.leaderIP])
                     self.send_updates(to_send)
                     print("to send", len(to_send))
@@ -364,9 +370,10 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def begin(self):
         thread = threading.Thread(target=self.start)
-        broadthread = threading.Thread(target=self.broadStart)
+        broadthread = threading.Thread(target=self.start_broadcast)
         broadthread.start()
         thread.start()
 
@@ -374,7 +381,6 @@ class Server:
 #######################
 # For leader election #
 #######################
-
 
     def form_ring(self):
         print("before", self.server_dic)
@@ -410,21 +416,25 @@ class Server:
 # this function will be used by each node in the ring to start the election
 # a node will construct its election msg and then pass it down to its neighbour
 
+
     def start_election(self):
         print("Leader election started..........")
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
-        node_index = self.server_dic.index(current_node)
+        current_node_index = self.server_dic.index(current_node)
         message = {"Type": "ELECT",
-                   "PID": node_index,
+                   "PID": current_node_index,
                    "is_leader": False}
-        message = pickle.dumps(message)
-        next_node = self.get_neighbour()
-        ip, port = next_node.split(":")[0], int(next_node.split(":")[1])
+        message = json.dumps(message)
+        neighbour = self.get_neighbour()
+        ip, port = neighbour.split(":")[0], int(neighbour.split(":")[1])
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, port))
-        to_send_len = pickle.dumps(len(message))
-        ring_socket.send(to_send_len)
-        ring_socket.send(message)
+        to_send_len = json.dumps(len(message))
+        print("message dumps is: ", json.dumps(message))
+        print("message loads is: ", json.loads(message))
+        print("LENGTH IS: ", len(message))
+        ring_socket.send(to_send_len.encode(self.FORMAT))
+        ring_socket.send(message.encode(self.FORMAT))
 
 
 # this function will be used by each node to forward election msgs around the ring
@@ -435,6 +445,7 @@ class Server:
     # it passes the msg down to the next node without updating the pid and marks itself as participant
 # a node receives an election msg with its own pid,
     # it understands that it has become the new leader and hence sends out a broadcast msg to notify all nodes
+
 
     def forward_election_message(self, neighbour_msg):
         print("Forwarding [ELECTION MESSAGE]...........")
@@ -457,17 +468,18 @@ class Server:
                 "is_Leader": False
             }
             self.participant = True
-            to_send_len = len(pickle.dumps(new_election_message))
+            to_send_len = len(json.dumps(new_election_message))
             ring_socket.send(to_send_len)
-            ring_socket.send(pickle.dumps(new_election_message))
+            ring_socket.send(json.dumps(
+                new_election_message).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] > current_node_index and not self.participant:
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
-            to_send_len = len(pickle.dumps(neighbour_msg))
+            to_send_len = len(json.dumps(neighbour_msg))
             ring_socket.send(to_send_len)
-            ring_socket.send(pickle.dumps(
-                neighbour_msg))
+            ring_socket.send(json.dumps(
+                neighbour_msg).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] == current_node_index:
             # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
@@ -482,10 +494,10 @@ class Server:
             # mark self as no longer a participant and send new election message to left neighbour
             self.participant = False
             self.leaderIP = self.server_ip
-            to_send_len = len(pickle.dumps(new_election_message))
+            to_send_len = len(json.dumps(new_election_message))
             ring_socket.send(to_send_len)
-            ring_socket.send(pickle.dumps(
-                new_election_message))
+            ring_socket.send(json.dumps(
+                new_election_message).encode(self.FORMAT))
 
     def ttl_set_remove(self, server, ttl):
         while True:
@@ -505,7 +517,7 @@ class Server:
                         "servers_list": self.server_dic,
                         "leader_IP": self.leaderIP
                     }
-                    self.send_updates(pickle.dumps(replica))
+                    self.send_updates(json.dumps(replica))
 
                 else:
                     self.server_hp[i] = (ip[0], False)
@@ -521,9 +533,9 @@ class Server:
                     (ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
                 print("sending to Server", ip_port)
-                to_send_len = pickle.dumps(len(to_send))
-                connect_to_server_socket.send(to_send_len)
-                connect_to_server_socket.send(to_send)
+                to_send_len = json.dumps(len(to_send))
+                connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
+                connect_to_server_socket.send(to_send.encode(self.FORMAT))
 
 
 def main(is_leader, port):
