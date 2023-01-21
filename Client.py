@@ -16,10 +16,11 @@ JOINEDROOMS=[]
 FT=True
 broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
+Recthread=threading.Thread()
 # BOOLS
 not_connected=True
-
+serverdown=True
+started = False
 def broadcast(ip,port,message):
     # Create a UDP socket
     
@@ -40,8 +41,16 @@ def send(msg):
 
 def NormReceiver(LserverIP):
     client.connect((LserverIP,5050))
+    serverdown=False
+
     global FT
     while True:
+        try:
+            client_to_listen.timeout(0.5)
+        except:
+            if  serverdown:
+                FT=True
+                break   
 
         if not(FT):
             print(client.recv(64).decode(FORMAT),"\n")
@@ -54,9 +63,11 @@ def NormReceiver(LserverIP):
 # WHEN THE SOCKET RECEVIES THE IP FROM THE SERVER IT CONNECT WITH THE SERVER TCP
 def GetServerIP():
     global not_connected
-    started = False
+    global Recthread
+    global serverdown
     client_to_listen.listen()
-    while not_connected:
+    while True:
+
         conn, LServerIP = client_to_listen.accept()
         print("accepted",LServerIP)
 
@@ -66,8 +77,30 @@ def GetServerIP():
             Recthread.start()
             started =True
         
-        not_connected=False
         conn.close()
+# Send a heart beat to the server to check it it is available or not (detect server crash)
+def client_heatbeat():
+    global Recthread
+    global get_leaderIP_Thread
+    global started
+    while True:
+        time.sleep(0.5)
+        try:
+            client.send("HEARTBEAT".encode(FORMAT))
+        except:
+            serverdown=True
+            started = False
+            print("We're currently performing a server exorcism to rid them of any evil spirits causing downtime. Hang tight, we'll have them back in no time")   
+ 
+
+            while serverdown: 
+                Port_tobroadcast=client_to_listen.getsockname()[1]
+                broadcast(BROADCASTIP,BROADCASTPORT,"CONN:"+str(Port_tobroadcast))
+                time.sleep(0.5)
+
+
+
+
 
 # SETUP THE CLIENT THAT WOULD CONNECT TO THE LEADER SERVER 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -84,7 +117,7 @@ get_leaderIP_Thread.start()
 #-----------------------------------------------------------------------------------------
 
 # BROADCAST THE MESSAGE TO THE LEADER SERVER 
-while not_connected:
+while serverdown:
     print("Iam broadcasting")
     broadcast(BROADCASTIP,BROADCASTPORT,"CONN:"+str(Port_tobroadcast))
     time.sleep(0.5)
