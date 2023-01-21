@@ -31,6 +31,7 @@ def broadcast(ip,port,message):
     broadcast_socket.sendto(MESSAGE.encode(FORMAT), (ip, port))
     # time.sleep(2)
 def send(msg):
+    global client
     message = msg.encode(FORMAT)
     msg_length = len(message)
     send_length = str(msg_length).encode(FORMAT)
@@ -39,24 +40,40 @@ def send(msg):
     client.send(message)
     # print(client.recv(64).decode(FORMAT))
 
-def NormReceiver(LserverIP):
+def NormReceiver(LserverIP,conn):
+    global client
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((LserverIP,5050))
     serverdown=False
 
     global FT
     while True:
         try:
-            client_to_listen.timeout(0.5)
+            conn.timeout(0.5)
         except:
-            if  serverdown:
+            if serverdown:
+                print ("server dowwwwwwwwn")
                 FT=True
                 break   
 
         if not(FT):
-            print(client.recv(64).decode(FORMAT),"\n")
+            try:
+                print(conn.recv(64).decode(FORMAT),"\n BTSSSSSSSSSSSS")
+            except:
+                if serverdown:
+                    print ("server dowwwwwwwwn")
+                    FT=True
+                    break  
         else:
+            print(FT)
             global Socketconn
-            Socketconn= client.recv(64).decode(FORMAT)    
+            try:
+                Socketconn= conn.recv(64).decode(FORMAT)    
+            except:
+                if serverdown:
+                    print ("server dowwwwwwwwn")
+                    FT=True
+                    break     
             print(Socketconn)  
             FT=False 
 
@@ -65,28 +82,33 @@ def GetServerIP():
     global not_connected
     global Recthread
     global serverdown
+    global started
     client_to_listen.listen()
     while True:
-
-        conn, LServerIP = client_to_listen.accept()
-        print("accepted",LServerIP)
+        conn=''
+        while serverdown:
+            conn, LServerIP = client_to_listen.accept()
+            print("accepted",LServerIP)
+            serverdown = False
 
         # START HERE TO listen from messeages coming from tcp Side
-        if not(started):
-            Recthread= threading.Thread(target=NormReceiver,args=(LServerIP[0],))
+        if not(started) and not serverdown:
+            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+            Recthread= threading.Thread(target=NormReceiver,args=(LServerIP[0],conn))
             Recthread.start()
             started =True
         
-        conn.close()
+        # conn.close()
 # Send a heart beat to the server to check it it is available or not (detect server crash)
-def client_heatbeat():
+def client_heartbeat():
     global Recthread
     global get_leaderIP_Thread
     global started
+    global serverdown
     while True:
         time.sleep(0.5)
         try:
-            client.send("HEARTBEAT".encode(FORMAT))
+            send("HEARTBEAT")
         except:
             serverdown=True
             started = False
@@ -117,10 +139,13 @@ get_leaderIP_Thread.start()
 #-----------------------------------------------------------------------------------------
 
 # BROADCAST THE MESSAGE TO THE LEADER SERVER 
-while serverdown:
-    print("Iam broadcasting")
-    broadcast(BROADCASTIP,BROADCASTPORT,"CONN:"+str(Port_tobroadcast))
-    time.sleep(0.5)
+
+heart_beat_thread=threading.Thread(target=client_heartbeat)
+heart_beat_thread.start()
+# while serverdown:
+#     print("Iam broadcasting")
+#     broadcast(BROADCASTIP,BROADCASTPORT,"CONN:"+str(Port_tobroadcast))
+#     time.sleep(0.5)
 
 serverIP = socket.gethostbyname(socket.gethostname())
 #--------------------------------------------------------------------------------------------
