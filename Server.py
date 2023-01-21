@@ -459,7 +459,7 @@ class Server:
 
         neighbour = self.get_neighbour()
         ip, port = neighbour.split(':')[0], neighbour.split(":")[1]
-
+        print(f"this is my neighbour {ip}  {port}")
         # creating a TCP socket to be used for passing election msgs around the ring
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, int(port)))
@@ -467,7 +467,41 @@ class Server:
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
 
-        if neighbour_msg['PID'] < current_node_index and not self.participant:
+        if neighbour_msg['is_Leader']  and  not(neighbour_msg['PID'] == current_node_index):
+            self.participant=False
+            self.leaderIP=self.server_dic[neighbour_msg['PID']]
+            to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
+            ring_socket.send(to_send_len.encode(self.FORMAT))
+            ring_socket.send(json.dumps(neighbour_msg).encode(self.FORMAT))
+
+        elif neighbour_msg['PID'] == current_node_index:
+            # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
+            if neighbour_msg['is_Leader'] == True:
+                self.is_leader = True
+                print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
+                return
+            else:
+                print("received my OWN ID")
+                new_election_message = {
+                    "Type":"ELECT",
+                    "PID": current_node_index,
+                    "is_Leader": True
+                }
+                # mark self as no longer a participant and send new election message to left neighbour
+                self.participant = False
+                self.leaderIP = self.server_ip
+                to_send_len = json.dumps(len(json.dumps(new_election_message)))
+                ring_socket.send(to_send_len.encode(self.FORMAT))
+                ring_socket.send(json.dumps(
+                    new_election_message).encode(self.FORMAT))
+
+        elif self.participant:   
+            to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
+            ring_socket.send(to_send_len.encode(self.FORMAT))
+            ring_socket.send(json.dumps(
+                neighbour_msg).encode(self.FORMAT))     
+
+        elif neighbour_msg['PID'] < current_node_index:
             # update msg with own PID & set self as participant
             new_election_message = {
                 "Type": "ELECT",
@@ -480,7 +514,8 @@ class Server:
             ring_socket.send(json.dumps(
                 new_election_message).encode(self.FORMAT))
 
-        elif neighbour_msg['PID'] > current_node_index and not self.participant:
+        elif neighbour_msg['PID'] > current_node_index:
+            print("PID is bigger than mine")
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
             to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
@@ -488,23 +523,7 @@ class Server:
             ring_socket.send(json.dumps(
                 neighbour_msg).encode(self.FORMAT))
 
-        elif neighbour_msg['PID'] == current_node_index:
-            # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
-            if neighbour_msg['is_Leader'] == True:
-                self.is_leader = True
-
-            print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
-            new_election_message = {
-                "PID": current_node_index,
-                "is_Leader": True
-            }
-            # mark self as no longer a participant and send new election message to left neighbour
-            self.participant = False
-            self.leaderIP = self.server_ip
-            to_send_len = json.dumps(len(json.dumps(new_election_message)))
-            ring_socket.send(to_send_len.encode(self.FORMAT))
-            ring_socket.send(json.dumps(
-                new_election_message).encode(self.FORMAT))
+        
 
     def ttl_set_remove(self, server, ttl):
         while True:
