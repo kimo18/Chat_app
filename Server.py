@@ -518,8 +518,10 @@ class Server:
             # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
             if neighbour_msg['is_Leader'] == True:
                 self.is_leader = True
-                self.leaderIP = self.server_ip
+                self.leaderIP = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
                 print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
+                self.server_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                 self.server_server_socket.bind(self.SERVERSERVERADDR)
                 threading.Thread(target=self.ServerBroadListen).start()
                 return
