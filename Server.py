@@ -520,6 +520,8 @@ class Server:
                 self.is_leader = True
                 self.leaderIP = self.server_ip
                 print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
+                self.server_server_socket.bind(self.SERVERSERVERADDR)
+                threading.Thread(target=self.ServerBroadListen).start()
                 return
             else:
                 print("received my OWN ID")
