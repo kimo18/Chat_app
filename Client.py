@@ -39,9 +39,13 @@ def broadcast(ip, port, message):
 def send(msg):
     global client
     message = msg.encode(FORMAT)
+    print("message is:", message)
     msg_length = len(message)
+    print("msg length ", msg_length)
     send_length = str(msg_length).encode(FORMAT)
+    print("send length before padding", send_length)
     send_length += b' ' * (HEADER - len(send_length))
+    print("send length after padding", send_length)
     client.send(send_length)
     client.send(message)
     # print(client.recv(64).decode(FORMAT))
@@ -55,6 +59,7 @@ def NormReceiver(LserverIP, conn):
     serverdown = False
 
     global FT
+    global local_timestamp
     while True:
         if DISCONNECT_FLAG:
             return
@@ -70,6 +75,7 @@ def NormReceiver(LserverIP, conn):
                 if len(msg) > 0:
 
                     if '_' in msg:
+                        
                         print("UNDERSCORE")
                         time_stamp=msg.split('_')[0]
                         thread = threading.Thread(target=check_precedence,args=(time_stamp,msg))
@@ -77,6 +83,9 @@ def NormReceiver(LserverIP, conn):
                         print(f"thread {thread.getName()} is alive ", thread.is_alive())
                         thread.start()
                     
+                    elif '?' in msg:
+                        local_timestamp= int(msg.split("?")[0])
+                        print(msg.split('?')[1], "\n")
                     else:
                         print(msg, "\n")
             except:
@@ -132,7 +141,7 @@ def client_heartbeat():
     global serverdown
     global FT
     global heartbeat_is_sleeping
-    
+
     while True:
         heartbeat_is_sleeping=True
         time.sleep(2)

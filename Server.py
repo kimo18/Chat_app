@@ -149,10 +149,10 @@ class Server:
                         if not (room == None):
                             room.add_user(addr[1])
                             conn.send(
-                                F"You have joined {room.name} chatroom".encode(self.FORMAT))
+                                f"{room.sequencer}?You have joined {room.name} chatroom".encode(self.FORMAT))
                         else:
                             conn.send(
-                                F"There is no chatroom with name: {room.name}".encode(self.FORMAT))
+                                f"There is no chatroom with name: {room.name}".encode(self.FORMAT))
 
                     else:
                         conn.send(
