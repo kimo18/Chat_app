@@ -10,7 +10,8 @@ Socketconn = ""
 BROADCASTIP = "255.255.255.255"
 BROADCASTPORT = 5972
 FORMAT = 'utf-8'
-DISCONNECT_MESSAGE = "/DISCONNECT"
+DISCONNECT_MESSAGE = "!DISCONNECT"
+DISCONNECT_FLAG = False
 MYIP = socket.gethostbyname(socket.gethostname())
 JOINEDROOMS = []
 FT = True
@@ -54,7 +55,8 @@ def NormReceiver(LserverIP, conn):
 
     global FT
     while True:
-
+        if DISCONNECT_FLAG:
+            return
         client.settimeout(1)
         if serverdown:
             print("server dowwwwwwwwn")
@@ -118,7 +120,9 @@ def client_heartbeat():
     global started
     global serverdown
     while True:
-        time.sleep(10)
+        time.sleep(2)
+        if DISCONNECT_FLAG:
+            return
         try:
             send("HEARTBEAT")
         except:
@@ -168,9 +172,13 @@ while True:
     mess = input()
     if mess == DISCONNECT_MESSAGE:
         send(mess)
+        DISCONNECT_FLAG = True
         broadcast_socket.close()
+        # client.close()
+        # client_heartbeat
+        # sys.exit(0)
 
-    if len(mess) >= 2:
+    elif len(mess) >= 2:
         if mess[:2] == "/A":
             broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
         elif mess[:2] == "/M":
