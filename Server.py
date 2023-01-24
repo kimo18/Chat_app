@@ -97,7 +97,7 @@ class Server:
                 del self.all_connected_client[addr[1]]
                 for chat_rooms in self.chat_rooms:
                     if chat_rooms.Leader== addr[1]:
-                        if chat_rooms.users==[]:
+                        if len(chat_rooms.users)==1:
                             self.chat_rooms.remove(chat_rooms)
                         else:
                             chat_rooms.Leader=chat_rooms.users[0]    
@@ -118,11 +118,11 @@ class Server:
                         for x in self.chat_rooms:
                             if x.name == roomname and (addr[1] in x.users):
                                 x.sequencer+=1
+                                Message = f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(self.FORMAT)
                                 for socketnum in x.users:
                                     if not (addr[1] == socketnum):
                                         if len(Message) > 2:
                                             print("before sending in server: ", Message)
-                                            Message = f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(self.FORMAT)
                                             self.all_connected_client[socketnum][1].send(
                                                 Message)
 

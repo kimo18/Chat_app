@@ -23,7 +23,7 @@ Recthread = threading.Thread()
 not_connected = True
 serverdown = True
 started = False
-
+heartbeat_is_sleeping=True
 
 def broadcast(ip, port, message):
     # Create a UDP socket
@@ -74,7 +74,6 @@ def NormReceiver(LserverIP, conn):
                         time_stamp=msg.split('_')[0]
                         thread = threading.Thread(target=check_precedence,args=(time_stamp,msg))
                         print("will start thread")
-                        thread.setName("TIMESTAMP THREAD")
                         print(f"thread {thread.getName()} is alive ", thread.is_alive())
                         thread.start()
                     
@@ -132,8 +131,12 @@ def client_heartbeat():
     global started
     global serverdown
     global FT
+    global heartbeat_is_sleeping
+    
     while True:
+        heartbeat_is_sleeping=True
         time.sleep(2)
+        heartbeat_is_sleeping=False
         if DISCONNECT_FLAG:
             return
         try:
@@ -191,31 +194,31 @@ serverIP = socket.gethostbyname(socket.gethostname())
 
 
 while True:
-
-    mess = input()
-    if mess == DISCONNECT_MESSAGE:
-        send(mess)
-        DISCONNECT_FLAG = True
-        broadcast_socket.close()
-        # client.close()
-        # client_heartbeat
-        # sys.exit(0)
-
-    elif len(mess) >= 2:
-        if mess[:2] == "/A":
-            broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
-        elif mess[:2] == "/M":
-            local_timestamp+=1
+    if heartbeat_is_sleeping:
+        mess = input()
+        if mess == DISCONNECT_MESSAGE:
             send(mess)
-        else:
-            if len(mess) >= 5:
-                if mess[:5] == "/JOIN":
-                    send(mess)
-                else:
-                    if len(mess) >= 7:
-                        if mess[:7] == "/CREATE":
-                            send(mess)
-                        else:
-                            print("Not a valid Keyword\n")
+            DISCONNECT_FLAG = True
+            broadcast_socket.close()
+            # client.close()
+            # client_heartbeat
+            # sys.exit(0)
+
+        elif len(mess) >= 2:
+            if mess[:2] == "/A":
+                broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
+            elif mess[:2] == "/M":
+                local_timestamp+=1
+                send(mess)
+            else:
+                if len(mess) >= 5:
+                    if mess[:5] == "/JOIN":
+                        send(mess)
+                    else:
+                        if len(mess) >= 7:
+                            if mess[:7] == "/CREATE":
+                                send(mess)
+                            else:
+                                print("Not a valid Keyword\n")
 
 # send(DISCONNECT_MESSAGE)
