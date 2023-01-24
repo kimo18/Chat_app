@@ -90,10 +90,20 @@ class Server:
                 msg_length = conn.recv(self.HEADER).decode(self.FORMAT)
 
             except ConnectionResetError as exception:
-                print("inside expect ", exception)
+                # print("inside expect ", exception)
                 connected = False
                 if not (self.chat_rooms):
                     print(f"User {addr[1]} has left the system!")
+
+                del self.all_connected_client[addr[1]]
+                for chat_rooms in self.chat_rooms:
+                    if chat_rooms.Leader== addr[1]:
+                        if chat_rooms.users==[]:
+                            self.chat_rooms.remove(chat_rooms)
+                        else:
+                            chat_rooms.Leader=chat_rooms.users[0]    
+                    
+
                 msg_length = None
                 conn.close()
 
@@ -121,8 +131,7 @@ class Server:
                     # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
                     if len(msg) > 8:
                         self.CreateRoom(addr[1], msg[8:], self.server_ip)
-                        conn.send(
-                            f"Room with name {msg[8:]} is created".encode(self.FORMAT))
+                        conn.send(f"Room with name {msg[8:]} is created".encode(self.FORMAT))
                         for key, value in self.all_connected_client.items():
                             print(key, value)
                             if not (key == addr[1]):
@@ -511,6 +520,8 @@ class Server:
                 self.is_leader = True
                 self.leaderIP = self.server_ip
                 print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
+                self.server_server_socket.bind(self.SERVERSERVERADDR)
+                threading.Thread(target=self.ServerBroadListen).start()
                 return
             else:
                 print("received my OWN ID")
