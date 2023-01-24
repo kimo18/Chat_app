@@ -41,8 +41,8 @@ class Server:
     server_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-
-    connect_to_server_socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
+    connect_to_server_socket = socket.socket(
+        socket.AF_INET, socket.SOCK_STREAM)
 
     # server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -86,67 +86,74 @@ class Server:
         connected = True
         # LOOPING UNTILL THE CLIENT SENDS THE DISCONNECT MESSAGE TO CLOSE THE CONNECTION
         while connected:
-            msg_length = conn.recv(self.HEADER).decode(self.FORMAT)
-            if msg_length:
-                msg_length = int(msg_length)
-                msg = conn.recv(msg_length).decode(self.FORMAT)
+            try:
+                msg_length = conn.recv(self.HEADER).decode(self.FORMAT)
+                if msg_length:
+                    msg_length = int(msg_length)
+                    msg = conn.recv(msg_length).decode(self.FORMAT)
 
-                # Send Messages from clients to other clients in same chatroom
-                if msg[:2] == "/M":
-                    Message = msg.split(" ")
-                    if len(Message) > 1:
-                        roomname = Message[1]
-                        for x in self.chat_rooms:
-                            if x.name == roomname and (addr[1] in x.users):
-                                for socketnum in x.users:
-                                    if not (addr[1] == socketnum):
-                                        if len(Message) > 2:
-                                            self.all_connected_client[socketnum][1].send(
-                                                Message[2].encode(self.FORMAT))
+                    # Keyword to send Messages from clients to other clients in same chatroom
+                    if msg[:2] == "/M":
+                        Message = msg.split(" ")
+                        if len(Message) > 1:
+                            roomname = Message[1]
+                            for x in self.chat_rooms:
+                                if x.name == roomname and (addr[1] in x.users):
+                                    for socketnum in x.users:
+                                        if not (addr[1] == socketnum):
+                                            if len(Message) > 2:
+                                                self.all_connected_client[socketnum][1].send(
+                                                    Message[2].encode(self.FORMAT))
 
-                # CREATE A CHAT ROOM AND ADD THE USER WHO CREATED IT
-                if msg[:7] == "/CREATE":
-                    # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
-                    if len(msg) > 8:
-                        self.CreateRoom(addr[1], msg[8:], self.server_ip)
-                        conn.send(
-                            f"Room with name {msg[8:]} is created".encode(self.FORMAT))
-                        for key, value in self.all_connected_client.items():
-                            print(key, value)
-                            if not (key == addr[1]):
-                                value[1].send(
-                                    f"A new Room named {msg[8:]} was Created by User {addr[0]}".encode(self.FORMAT))
-
-                    else:
-                        conn.send("Please Specify the name of the chatroom you want to create".encode(
-                            self.FORMAT))
-                # CLIENT SEND A MESSAGE TO JOIN AN EXISTING CHAT ROOM
-                if msg[:5] == "/JOIN":
-                    # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
-                    if len(msg) > 6:
-                        room = self.RoomSearch(msg[6:])
-                        if not (room == None):
-                            room.add_user(addr[1])
+                    # keyword to create a chat room and add the user who created it to it
+                    if msg[:7] == "/CREATE":
+                        # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
+                        if len(msg) > 8:
+                            self.CreateRoom(addr[1], msg[8:], self.server_ip)
                             conn.send(
-                                F"You have joined {room.name} chatroom".encode(self.FORMAT))
+                                f"Room with name {msg[8:]} is created".encode(self.FORMAT))
+                            for key, value in self.all_connected_client.items():
+                                print(key, value)
+                                if not (key == addr[1]):
+                                    value[1].send(
+                                        f"A new Room named {msg[8:]} was Created by User {addr[0]}".encode(self.FORMAT))
+
+                        else:
+                            conn.send("Please Specify the name of the chatroom you want to create".encode(
+                                self.FORMAT))
+                    # CLIENT SEND A MESSAGE TO JOIN AN EXISTING CHAT ROOM
+                    if msg[:5] == "/JOIN":
+                        # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
+                        if len(msg) > 6:
+                            room = self.RoomSearch(msg[6:])
+                            if not (room == None):
+                                room.add_user(addr[1])
+                                conn.send(
+                                    F"You have joined {room.name} chatroom".encode(self.FORMAT))
+                            else:
+                                conn.send(
+                                    F"There is no chatroom with name: {room.name}".encode(self.FORMAT))
+
                         else:
                             conn.send(
-                                F"There is no chatroom with name: {room.name}".encode(self.FORMAT))
-
-                    else:
-                        conn.send(
-                            "Please Specify the name of the chatroom you want to join".encode(self.FORMAT))
+                                "Please Specify the name of the chatroom you want to join".encode(self.FORMAT))
                 #  CHECK FOR THE DISCONNECT MESSAGE
                 if msg == self.DISCONNECT_MESSAGE:
                     connected = False
 
-                print(f"[{addr}] {msg}")
+            except:
+                connected = False
 
                 # if len(ChatRooms)==0:
                 #     conn.send("There is no Chat Rooms available If you want Create one Please Confrim with /CONFIRM !!".encode(FORMAT))
                 # else:
                 #     conn.send([x for x in ChatRooms])
 
+        # update chat room group view
+        for room in self.chat_rooms:
+            if (addr[1] in room.users):
+                room.remove_user(addr[1])
+                print(f"User {addr[1]} has left the chat room {room.name}!")
         conn.close()
 
  # _________________________________________________________________________________________
@@ -235,7 +242,8 @@ class Server:
                                 f" this is the chat rooms{self.chat_rooms} \n [LIST OF SERVERS: ] {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
                     else:
                         print("inside else for forward election msg")
-                        threading.Thread(target=self.forward_election_message, args=[message,]).start()
+                        threading.Thread(target=self.forward_election_message, args=[
+                                         message,]).start()
 
                 except:
                     # change the server's hp to 'True' when the leader server receives the hearbeat
@@ -322,7 +330,7 @@ class Server:
 
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
-        if ConnNumber and Type:
+        if ConnNumber and Type and self.is_leader:
             print(
                 f"Sending available chat rooms to client at address {addr[0]}")
             if len(self.chat_rooms) == 0:
@@ -475,12 +483,14 @@ class Server:
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
         print("btssssssssssssssssssssssssssss", neighbour_msg['is_Leader'])
-        if neighbour_msg['is_Leader']  and  not(neighbour_msg['PID'] == current_node_index):
-            self.participant=False
-            self.leaderIP=self.server_dic[neighbour_msg['PID']]
+        if neighbour_msg['is_Leader'] and not (neighbour_msg['PID'] == current_node_index):
+            self.participant = False
+            self.leaderIP = self.server_dic[neighbour_msg['PID']]
 
-            leader_IP, leader_port = self.leaderIP.split( ":")[0], int(self.leaderIP.split(":")[1])
-            self.connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            leader_IP, leader_port = self.leaderIP.split(
+                ":")[0], int(self.leaderIP.split(":")[1])
+            self.connect_to_server_socket = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM)
             self.connect_to_server_socket.connect((leader_IP, leader_port))
 
             to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
@@ -503,17 +513,17 @@ class Server:
                 }
                 # mark self as no longer a participant and send new election message to left neighbour
                 self.participant = False
-               
+
                 to_send_len = json.dumps(len(json.dumps(new_election_message)))
                 ring_socket.send(to_send_len.encode(self.FORMAT))
                 ring_socket.send(json.dumps(
                     new_election_message).encode(self.FORMAT))
 
-        # elif self.participant:   
+        # elif self.participant:
         #     to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
         #     ring_socket.send(to_send_len.encode(self.FORMAT))
         #     ring_socket.send(json.dumps(
-        #         neighbour_msg).encode(self.FORMAT))     
+        #         neighbour_msg).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] < current_node_index:
             # update msg with own PID & set self as participant
