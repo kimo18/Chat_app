@@ -118,7 +118,7 @@ def client_heartbeat():
     global started
     global serverdown
     while True:
-        time.sleep(0.5)
+        time.sleep(10)
         try:
             send("HEARTBEAT")
         except:
