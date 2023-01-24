@@ -322,7 +322,7 @@ class Server:
 
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
-        if ConnNumber and Type:
+        if ConnNumber and Type and self.is_leader:
             print(
                 f"Sending available chat rooms to client at address {addr[0]}")
             if len(self.chat_rooms) == 0:
