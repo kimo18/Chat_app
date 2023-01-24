@@ -15,6 +15,7 @@ DISCONNECT_FLAG = False
 MYIP = socket.gethostbyname(socket.gethostname())
 JOINEDROOMS = []
 FT = True
+local_timestamp=0
 broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 Recthread = threading.Thread()
@@ -67,7 +68,13 @@ def NormReceiver(LserverIP, conn):
             try:
                 msg = client.recv(64).decode(FORMAT)
                 if len(msg) > 0:
-                    print(msg, "\n")
+
+                    if "_" in msg:
+                        time_stamp=msg.split["_"][0]
+                        threading.Thread(target=check_precedence,args=[time_stamp,msg]).start()
+                    
+                    else:
+                        print(msg, "\n")
             except:
                 if serverdown:
                     print("server dowwwwwwwwn")
@@ -119,6 +126,7 @@ def client_heartbeat():
     global get_leaderIP_Thread
     global started
     global serverdown
+    global FT
     while True:
         time.sleep(2)
         if DISCONNECT_FLAG:
@@ -128,7 +136,8 @@ def client_heartbeat():
         except:
             serverdown = True
             started = False
-            print("We're currently performing a server exorcism to rid them of any evil spirits causing downtime. Hang tight, we'll have them back in no time")
+            if not FT:
+                print("We're currently performing a server exorcism to rid them of any evil spirits causing downtime. Hang tight, we'll have them back in no time")
 
             while serverdown:
                 Port_tobroadcast = client_to_listen.getsockname()[1]
@@ -136,6 +145,14 @@ def client_heartbeat():
                           "CONN:"+str(Port_tobroadcast))
                 time.sleep(0.5)
 
+def check_precedence(time_stamp,message):
+    global local_timestamp
+    while True:
+        if local_timestamp+1<time_stamp:
+            time.sleep(0.5)
+        else: 
+            local_timestamp+=1   
+            print(message)
 
 # SETUP THE CLIENT THAT WOULD CONNECT TO THE LEADER SERVER
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -182,6 +199,7 @@ while True:
         if mess[:2] == "/A":
             broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
         elif mess[:2] == "/M":
+            local_timestamp+=1
             send(mess)
         else:
             if len(mess) >= 5:

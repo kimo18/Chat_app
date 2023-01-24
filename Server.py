@@ -120,11 +120,13 @@ class Server:
                         print("")
                         for x in self.chat_rooms:
                             if x.name == roomname and (addr[1] in x.users):
+                                x.sequencer+=1
                                 for socketnum in x.users:
                                     if not (addr[1] == socketnum):
                                         if len(Message) > 2:
+                                            Message=f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(self.FORMAT)
                                             self.all_connected_client[socketnum][1].send(
-                                                Message[2].encode(self.FORMAT))
+                                                Message)
 
                 # keyword to create a chat room and add the user who created it to it
                 if msg[:7] == "/CREATE":
