@@ -69,9 +69,14 @@ def NormReceiver(LserverIP, conn):
                 msg = client.recv(64).decode(FORMAT)
                 if len(msg) > 0:
 
-                    if "_" in msg:
-                        time_stamp=msg.split["_"][0]
-                        threading.Thread(target=check_precedence,args=[time_stamp,msg]).start()
+                    if '_' in msg:
+                        print("UNDERSCORE")
+                        time_stamp=msg.split('_')[0]
+                        thread = threading.Thread(target=check_precedence,args=(time_stamp,msg))
+                        print("will start thread")
+                        thread.setName("TIMESTAMP THREAD")
+                        print(f"thread {thread.getName()} is alive ", thread.is_alive())
+                        thread.start()
                     
                     else:
                         print(msg, "\n")
@@ -148,11 +153,12 @@ def client_heartbeat():
 def check_precedence(time_stamp,message):
     global local_timestamp
     while True:
-        if local_timestamp+1<time_stamp:
+        if local_timestamp + 1 < int(time_stamp) :
             time.sleep(0.5)
         else: 
-            local_timestamp+=1   
+            local_timestamp += 1   
             print(message)
+            return
 
 # SETUP THE CLIENT THAT WOULD CONNECT TO THE LEADER SERVER
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

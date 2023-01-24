@@ -86,7 +86,6 @@ class Server:
         # LOOPING UNTILL THE CLIENT SENDS THE DISCONNECT MESSAGE OR CLOSES THE TERMINAL
         while connected:
             try:
-                print("inside try")
                 msg_length = conn.recv(self.HEADER).decode(self.FORMAT)
 
             except ConnectionResetError as exception:
@@ -108,7 +107,6 @@ class Server:
                 conn.close()
 
             if msg_length:
-                print("msg length: ", msg_length)
                 msg_length = int(msg_length)
                 msg = conn.recv(msg_length).decode(self.FORMAT)
 
@@ -117,14 +115,14 @@ class Server:
                     Message = msg.split(" ")
                     if len(Message) > 1:
                         roomname = Message[1]
-                        print("")
                         for x in self.chat_rooms:
                             if x.name == roomname and (addr[1] in x.users):
                                 x.sequencer+=1
                                 for socketnum in x.users:
                                     if not (addr[1] == socketnum):
                                         if len(Message) > 2:
-                                            Message=f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(self.FORMAT)
+                                            print("before sending in server: ", Message)
+                                            Message = f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(self.FORMAT)
                                             self.all_connected_client[socketnum][1].send(
                                                 Message)
 
