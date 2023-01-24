@@ -41,8 +41,8 @@ class Server:
     server_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-
-    connect_to_server_socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
+    connect_to_server_socket = socket.socket(
+        socket.AF_INET, socket.SOCK_STREAM)
 
     # server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -79,23 +79,35 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
 
         connected = True
-        # LOOPING UNTILL THE CLIENT SENDS THE DISCONNECT MESSAGE TO CLOSE THE CONNECTION
+        # LOOPING UNTILL THE CLIENT SENDS THE DISCONNECT MESSAGE OR CLOSES THE TERMINAL
         while connected:
-            msg_length = conn.recv(self.HEADER).decode(self.FORMAT)
+            try:
+                print("inside try")
+                msg_length = conn.recv(self.HEADER).decode(self.FORMAT)
+
+            except ConnectionResetError as exception:
+                print("inside expect ", exception)
+                connected = False
+                if not (self.chat_rooms):
+                    print(f"User {addr[1]} has left the system!")
+                msg_length = None
+                conn.close()
+
             if msg_length:
+                print("msg length: ", msg_length)
                 msg_length = int(msg_length)
                 msg = conn.recv(msg_length).decode(self.FORMAT)
 
-                # Send Messages from clients to other clients in same chatroom
+                # Keyword to send Messages from clients to other clients in same chatroom
                 if msg[:2] == "/M":
                     Message = msg.split(" ")
                     if len(Message) > 1:
                         roomname = Message[1]
+                        print("")
                         for x in self.chat_rooms:
                             if x.name == roomname and (addr[1] in x.users):
                                 for socketnum in x.users:
@@ -104,7 +116,7 @@ class Server:
                                             self.all_connected_client[socketnum][1].send(
                                                 Message[2].encode(self.FORMAT))
 
-                # CREATE A CHAT ROOM AND ADD THE USER WHO CREATED IT
+                # keyword to create a chat room and add the user who created it to it
                 if msg[:7] == "/CREATE":
                     # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
                     if len(msg) > 8:
@@ -136,17 +148,22 @@ class Server:
                     else:
                         conn.send(
                             "Please Specify the name of the chatroom you want to join".encode(self.FORMAT))
+
                 #  CHECK FOR THE DISCONNECT MESSAGE
                 if msg == self.DISCONNECT_MESSAGE:
                     connected = False
-
-                print(f"[{addr}] {msg}")
 
                 # if len(ChatRooms)==0:
                 #     conn.send("There is no Chat Rooms available If you want Create one Please Confrim with /CONFIRM !!".encode(FORMAT))
                 # else:
                 #     conn.send([x for x in ChatRooms])
 
+    # update chat room group view
+        for room in self.chat_rooms:
+            if (addr[1] in room.users):
+                room.remove_user(addr[1])
+                print(
+                    f"User {addr[1]} has left the chat room {room.name}!")
         conn.close()
 
  # _________________________________________________________________________________________
@@ -160,7 +177,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def RoomSearch(self, chatroom_name):
         for x in self.chat_rooms:
             if x.name == chatroom_name:
@@ -169,7 +185,6 @@ class Server:
 
 
 # _________________________________________________________________________________________
-
 
     def start(self):
         self.server_tolisten_socket.listen()
@@ -188,7 +203,6 @@ class Server:
 # _________________________________________________________________________________________
 #  server listen from other servers
 
-
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         print("Heloooooooooooooooooooooo",
@@ -204,7 +218,6 @@ class Server:
 
 # _________________________________________________________________________________________
 #  server receive from other server
-
 
     def server_recv(self, conn, addr):
         while True:
@@ -235,7 +248,8 @@ class Server:
                                 f" this is the chat rooms{self.chat_rooms} \n [LIST OF SERVERS: ] {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
                     else:
                         print("inside else for forward election msg")
-                        threading.Thread(target=self.forward_election_message, args=[message,]).start()
+                        threading.Thread(target=self.forward_election_message, args=[
+                                         message,]).start()
 
                 except:
                     # change the server's hp to 'True' when the leader server receives the hearbeat
@@ -285,7 +299,6 @@ class Server:
 
 # Send heartbeat message from servers to leader server
 
-
     def send_heartbeat_message(self):
         recevied = False
         while not recevied:
@@ -320,6 +333,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def SendRooms(self, ConnNumber, addr, Type):
         print(addr)
         if ConnNumber and Type and self.is_leader:
@@ -342,7 +356,6 @@ class Server:
 # _________________________________________________________________________________________
 # server broadcast to other server
 
-
     def s_broadcast(self, port, message):
 
         MESSAGE = message+","+"Server"
@@ -352,6 +365,7 @@ class Server:
 
 # _________________________________________________________________________________________
 # send to other server info
+
 
     def ServerBroadListen(self):
         print(
@@ -385,6 +399,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def begin(self):
         thread = threading.Thread(target=self.start)
         broadthread = threading.Thread(target=self.start_broadcast)
@@ -395,7 +410,6 @@ class Server:
 #######################
 # For leader election #
 #######################
-
 
     def form_ring(self):
         print("before", self.server_dic)
@@ -431,6 +445,7 @@ class Server:
 # this function will be used by each node in the ring to start the election
 # a node will construct its election msg and then pass it down to its neighbour
 
+
     def start_election(self):
         print("Leader election started..........")
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -461,6 +476,7 @@ class Server:
 # a node receives an election msg with its own pid,
     # it understands that it has become the new leader and hence sends out a broadcast msg to notify all nodes
 
+
     def forward_election_message(self, neighbour_msg):
 
         print("Forwarding [ELECTION MESSAGE]...........")
@@ -475,12 +491,14 @@ class Server:
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
         print("btssssssssssssssssssssssssssss", neighbour_msg['is_Leader'])
-        if neighbour_msg['is_Leader']  and  not(neighbour_msg['PID'] == current_node_index):
-            self.participant=False
-            self.leaderIP=self.server_dic[neighbour_msg['PID']]
+        if neighbour_msg['is_Leader'] and not (neighbour_msg['PID'] == current_node_index):
+            self.participant = False
+            self.leaderIP = self.server_dic[neighbour_msg['PID']]
 
-            leader_IP, leader_port = self.leaderIP.split( ":")[0], int(self.leaderIP.split(":")[1])
-            self.connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            leader_IP, leader_port = self.leaderIP.split(
+                ":")[0], int(self.leaderIP.split(":")[1])
+            self.connect_to_server_socket = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM)
             self.connect_to_server_socket.connect((leader_IP, leader_port))
 
             to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
@@ -503,17 +521,17 @@ class Server:
                 }
                 # mark self as no longer a participant and send new election message to left neighbour
                 self.participant = False
-               
+
                 to_send_len = json.dumps(len(json.dumps(new_election_message)))
                 ring_socket.send(to_send_len.encode(self.FORMAT))
                 ring_socket.send(json.dumps(
                     new_election_message).encode(self.FORMAT))
 
-        # elif self.participant:   
+        # elif self.participant:
         #     to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
         #     ring_socket.send(to_send_len.encode(self.FORMAT))
         #     ring_socket.send(json.dumps(
-        #         neighbour_msg).encode(self.FORMAT))     
+        #         neighbour_msg).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] < current_node_index:
             # update msg with own PID & set self as participant
