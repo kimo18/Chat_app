@@ -39,13 +39,9 @@ def broadcast(ip, port, message):
 def send(msg):
     global client
     message = msg.encode(FORMAT)
-    print("message is:", message)
     msg_length = len(message)
-    print("msg length ", msg_length)
     send_length = str(msg_length).encode(FORMAT)
-    print("send length before padding", send_length)
     send_length += b' ' * (HEADER - len(send_length))
-    print("send length after padding", send_length)
     client.send(send_length)
     client.send(message)
     # print(client.recv(64).decode(FORMAT))
