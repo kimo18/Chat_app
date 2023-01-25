@@ -240,6 +240,7 @@ class Server:
                             connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             try:
                                 connect_to_server_socket.connect((servers.split(":")[0], int(servers.split(":")[1])))
+                                print("3rftk ya mnwb anta meeeeeeeeeeeeen")
                             except:
                                 index_of_crashed_server= self.server_dic.index(f"{addr[1]}:{servers.split(':')[1]}")
                                 del self.server_dic[index_of_crashed_server]
