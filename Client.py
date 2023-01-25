@@ -126,7 +126,6 @@ def GetServerIP():
             started = True
 
         # conn.close()
-
 # Send a heart beat to the server to check if it is available or not (detect server crash)
 
 
@@ -145,7 +144,7 @@ def client_heartbeat():
         if DISCONNECT_FLAG:
             return
         try:
-            send("HEARTBEAT")
+            send(f"{Port_tobroadcast}?HEARTBEAT")
         except:
             serverdown = True
             started = False
@@ -153,10 +152,11 @@ def client_heartbeat():
                 print("We're currently performing a server exorcism to rid them of any evil spirits causing downtime. Hang tight, we'll have them back in no time")
 
             while serverdown:
-                Port_tobroadcast = client_to_listen.getsockname()[1]
+                toBroadcastPort = client_to_listen.getsockname()[1]
                 broadcast(BROADCASTIP, BROADCASTPORT,
-                          "CONN:"+str(Port_tobroadcast))
+                          "CONN:"+str(toBroadcastPort))
                 time.sleep(0.5)
+
 
 def check_precedence(time_stamp,message):
     global local_timestamp
@@ -193,6 +193,8 @@ heart_beat_thread.start()
 
 serverIP = socket.gethostbyname(socket.gethostname())
 # --------------------------------------------------------------------------------------------
+
+
 
 
 

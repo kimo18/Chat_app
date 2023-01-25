@@ -117,6 +117,8 @@ class Server:
             if msg_length:
                 msg_length = int(msg_length)
                 msg = conn.recv(msg_length).decode(self.FORMAT)
+
+                print("you dont have the right to call yourself a west coast gangster:", msg)
                 client_port=msg.split("?")[0]
                 port=client_port
 
