@@ -653,6 +653,7 @@ class Server:
         "chat_rooms":  [room.serialize() for room in self.chat_rooms],
         "servers_list": self.server_dic,
         "leader_IP": self.leaderIP}
+        print("this is the sent chat room serialized :", replica["chat_rooms"])
         self.send_updates(json.dumps(replica))
         
         
