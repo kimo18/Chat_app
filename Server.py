@@ -153,9 +153,13 @@ class Server:
                         threading.Thread(target=self.form_replica).start()
                         try:
                             client_data=self.all_connected_client[addr[1]]
+                            print("NICE TRY")
                             del self.all_connected_client[addr[1]]
                             self.all_connected_client[user]=client_data
+                            print("NICE AFTER")
+
                         except:
+                            print("NICE except")
                             pass
 
                         for key, value in self.all_connected_client.items():

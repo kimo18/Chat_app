@@ -24,7 +24,7 @@ not_connected = True
 serverdown = True
 started = False
 heartbeat_is_sleeping=True
-
+first_msg_sent=False
 def broadcast(ip, port, message):
     # Create a UDP socket
 
@@ -136,6 +136,7 @@ def client_heartbeat():
     global serverdown
     global FT
     global heartbeat_is_sleeping
+    global first_msg_sent
 
     while True:
         heartbeat_is_sleeping=True
@@ -148,6 +149,7 @@ def client_heartbeat():
         except:
             serverdown = True
             started = False
+            first_msg_sent=False
             if not FT:
                 print("We're currently performing a server exorcism to rid them of any evil spirits causing downtime. Hang tight, we'll have them back in no time")
 
@@ -212,21 +214,26 @@ while True:
 
         elif len(mess) >= 2:
             if mess[:2] == "/A":
-                if FT:
+                if FT or  not first_msg_sent:
                     broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
                 else:
                     broadcast(BROADCASTIP, BROADCASTPORT, f"{serverIP}:{Port_tobroadcast}")
             elif mess[:2] == "/M":
                 local_timestamp+=1
                 send(f"{Port_tobroadcast}?{mess}")
+                first_msg_sent=True
             else:
                 if len(mess) >= 5:
                     if mess[:5] == "/JOIN":
                         send(f"{Port_tobroadcast}?{mess}")
+                        first_msg_sent=True
+
                     else:
                         if len(mess) >= 7:
                             if mess[:7] == "/CREATE":
                                 send(f"{Port_tobroadcast}?{mess}")
+                                first_msg_sent=True
+
                             else:
                                 print("Not a valid Keyword\n")
 
