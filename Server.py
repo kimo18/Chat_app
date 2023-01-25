@@ -276,7 +276,7 @@ class Server:
 
                     if 'Type' not in message.keys():
                         try:
-                            self.chat_rooms =[room.deserialize() for room in message['chat_rooms']]
+                            self.chat_rooms =json.loads(message['chat_rooms'])
                         except:
                             self.chat_rooms = message['chat_rooms']
 
