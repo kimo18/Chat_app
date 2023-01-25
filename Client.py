@@ -195,7 +195,6 @@ serverIP = socket.gethostbyname(socket.gethostname())
 # --------------------------------------------------------------------------------------------
 
 
-# send broadcast message over network so Leader answers
 
 
 while True:
@@ -214,15 +213,15 @@ while True:
                 broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
             elif mess[:2] == "/M":
                 local_timestamp+=1
-                send(mess)
+                send(f"{Port_tobroadcast}?{mess}")
             else:
                 if len(mess) >= 5:
                     if mess[:5] == "/JOIN":
-                        send(mess)
+                        send(f"{Port_tobroadcast}?{mess}")
                     else:
                         if len(mess) >= 7:
                             if mess[:7] == "/CREATE":
-                                send(mess)
+                                send(f"{Port_tobroadcast}?{mess}")
                             else:
                                 print("Not a valid Keyword\n")
 
