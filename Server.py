@@ -137,7 +137,6 @@ class Server:
                         threading.Thread(target=self.form_replica).start()
 
                         for key, value in self.all_connected_client.items():
-                            print(key, value)
                             if not (key == addr[1]):
                                 value[1].send(
                                     f"A new Room named {msg[8:]} was Created by User {addr[0]}".encode(self.FORMAT))
@@ -239,12 +238,10 @@ class Server:
                 messagelen = conn.recv(64)
             except ConnectionResetError as exception :
                 if self.is_leader:
-                        print("Iam closing you potato man ")
                         for servers in self.server_dic:
                             connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             try:
                                 connect_to_server_socket.connect((servers.split(":")[0], int(servers.split(":")[1])))
-                                print("3rftk ya mnwb anta meeeeeeeeeeeeen")
                             except:
                                 index_of_crashed_server= self.server_dic.index(f"{addr[0]}:{servers.split(':')[1]}")
                                 del self.server_dic[index_of_crashed_server]
@@ -262,8 +259,7 @@ class Server:
             try:
                 messagelen = json.loads(messagelen.decode(self.FORMAT))
                 message = conn.recv(messagelen)
-                print("msg len in recv: ", messagelen)
-                print("msg in recv: ", message)
+               
 
             except:
                 message = conn.recv(len(messagelen.decode(self.FORMAT)))
@@ -271,7 +267,6 @@ class Server:
             if len(message) > 0:
                 try:
                     message = json.loads(message.decode(self.FORMAT))
-                    print("pickled")
                     print('message content: ', message)
 
                     if 'Type' not in message.keys():  
@@ -292,7 +287,6 @@ class Server:
 
                 except:
                     # change the server's hp to 'True' when the leader server receives the hearbeat
-                    print("Iam in")
                     message = message.decode(self.FORMAT)
                     port = message.split(":")[1]
                     
@@ -364,8 +358,6 @@ class Server:
                         message_to_send.encode(self.FORMAT))
                 # maybe we'll start leader election here
                 except:
-                    print("LEADER IP: ", self.leaderIP)
-                    print("DICTIONARY", self.server_dic)
                     self.server_dic.remove(self.leaderIP)
                     self.leaderIP = None
                     time.sleep(1)
@@ -630,7 +622,6 @@ class Server:
     def send_updates(self, to_send):
         for ip_port in self.server_dic:
 
-            print("what is the problema ", ip_port)
             if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"):
                 connect_to_server_socket = socket.socket(
                     socket.AF_INET, socket.SOCK_STREAM)
