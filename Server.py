@@ -621,7 +621,7 @@ class Server:
                     self.server_hp.remove((ip[0], ip[1]))
                     self.form_ring()
                     replica = {
-                        "chat_rooms": self.chat_rooms,
+                        "chat_rooms": self.room_to_dict(),
                         "servers_list": self.server_dic,
                         "leader_IP": self.leaderIP
                     }
