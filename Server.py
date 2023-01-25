@@ -6,7 +6,6 @@ from ChatRoom import ChatRoom
 import time
 import json
 # import emoji
-import atexit
 
 
 
@@ -67,7 +66,6 @@ class Server:
         self.number_servers = len(self.server_dic)
         threading.Thread(target=self.serverlisten).start()
         threading.Thread(target=self.send_heartbeat_message).start()
-        atexit.register(self.exit_handler)
         # if you are the leader then you listen for the broadcasted messages from the other server
         if self.is_leader:
             self.leaderIP = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -233,8 +231,27 @@ class Server:
 
     def server_recv(self, conn, addr):
         while True:
-            
-            messagelen = conn.recv(64)
+            try:
+                messagelen = conn.recv(64)
+            except ConnectionResetError as exception :
+                if self.is_leader:
+                        print("Iam closing you potato man ")
+                        for servers in self.server_dic:
+                            connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            try:
+                                connect_to_server_socket.connect((servers.split(":")[0], int(servers.split(":")[1])))
+                            except:
+                                index_of_crashed_server= self.server_dic.index(f"{addr[1]}:{servers.split(':')[1]}")
+                                del self.server_dic[index_of_crashed_server]
+                                del self.server_hp[index_of_crashed_server]
+                                self.form_ring()
+                                replica = {
+                                "chat_rooms": self.chat_rooms,
+                                "servers_list": self.server_dic,
+                                "leader_IP": self.leaderIP}
+                                self.send_updates(json.dumps(replica))
+                                conn.close() 
+                                return   
             message = ""
     
             try:
@@ -270,26 +287,14 @@ class Server:
                     print("Iam in")
                     message = message.decode(self.FORMAT)
                     port = message.split(":")[1]
+                    
+                    
 
-                    if self.is_leader and message.split(":")[0]==self.DISCONNECT_MESSAGE:
-                        print("Iam closing you potato man ")
-                        index_of_crashed_server= self.server_dic.index(f"{addr[1]}:{port}")
-                        del self.server_dic[index_of_crashed_server]
-                        del self.server_hp[index_of_crashed_server]
-                        self.form_ring()
-                        replica = {
-                        "chat_rooms": self.chat_rooms,
-                        "servers_list": self.server_dic,
-                        "leader_IP": self.leaderIP}
-                        self.send_updates(json.dumps(replica))
-                        conn.close()
-                    else:
+                    for i, ip in enumerate(self.server_hp):
+                        if ip[0] == f"{addr[0]}:{port}":
 
-                        for i, ip in enumerate(self.server_hp):
-                            if ip[0] == f"{addr[0]}:{port}":
-
-                                self.server_hp[i] = (ip[0], True)
-                                print("booooooga", self.server_hp)
+                            self.server_hp[i] = (ip[0], True)
+                            print("booooooga", self.server_hp)
 
                     # _________________________________________________________________________________________
 
@@ -631,10 +636,7 @@ class Server:
                 to_send_len = json.dumps(len(to_send))
                 connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
                 connect_to_server_socket.send(to_send.encode(self.FORMAT))
-    def exit_handler(self):
-        message_to_send = f"{self.DISCONNECT_MESSAGE}:{self.leaderserver_to_server_socket.getsockname()[1]}"
-        self.connect_to_server_socket.send(str(len(message_to_send)).encode( self.FORMAT)+b' '*(self.HEADER-len(str(len(message_to_send)).encode(self.FORMAT))))
-        self.connect_to_server_socket.send( message_to_send.encode(self.FORMAT))
+   
         
 
 def main(is_leader, port):
