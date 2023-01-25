@@ -8,8 +8,6 @@ import json
 # import emoji
 
 
-
-
 class Server:
     HEADER = 64
     FORMAT = 'utf-8'
@@ -82,7 +80,7 @@ class Server:
 
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
-        port=""
+        port = ""
         connected = True
         # LOOPING UNTILL THE CLIENT SENDS THE DISCONNECT MESSAGE OR CLOSES THE TERMINAL
         while connected:
@@ -97,18 +95,17 @@ class Server:
 
                 del self.all_connected_client[addr[1]]
                 for chat_rooms in self.chat_rooms:
-                    if chat_rooms.Leader== f"{addr[0]}:{port}":
-                        if len(chat_rooms.users)==1:
+                    if chat_rooms.Leader == f"{addr[0]}:{port}":
+                        if len(chat_rooms.users) == 1:
                             self.chat_rooms.remove(chat_rooms)
                             threading.Thread(target=self.form_replica).start()
                         else:
                             chat_rooms.users.remove(f"{addr[0]}:{port}")
-                            chat_rooms.Leader=chat_rooms.users[0]  
-                            threading.Thread(target=self.form_replica).start()  
+                            chat_rooms.Leader = chat_rooms.users[0]
+                            threading.Thread(target=self.form_replica).start()
                     elif f"{addr[0]}:{port}" in chat_rooms.users:
                         chat_rooms.users.remove(f"{addr[0]}:{port}")
-                        threading.Thread(target=self.form_replica).start()  
-
+                        threading.Thread(target=self.form_replica).start()
 
                 msg_length = None
                 conn.close()
@@ -118,12 +115,13 @@ class Server:
                 msg_length = int(msg_length)
                 msg = conn.recv(msg_length).decode(self.FORMAT)
 
-                print("you dont have the right to call yourself a west coast gangster:", msg)
-                client_port=msg.split("?")[0]
-                port=client_port
+                print(
+                    "you dont have the right to call yourself a west coast gangster:", msg)
+                client_port = msg.split("?")[0]
+                port = client_port
 
-                print("This is the stored client port:",port)
-                msg=msg.split("?")[1]
+                print("This is the stored client port:", port)
+                msg = msg.split("?")[1]
                 # Keyword to send Messages from clients to other clients in same chatroom
                 if msg[:2] == "/M":
                     Message = msg.split(" ")
@@ -131,13 +129,16 @@ class Server:
                         roomname = Message[1]
                         for x in self.chat_rooms:
                             if x.name == roomname and (addr[1] in x.users):
-                                x.sequencer+=1
-                                threading.Thread(target=self.form_replica).start()
-                                Message = f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(self.FORMAT)
+                                x.sequencer += 1
+                                threading.Thread(
+                                    target=self.form_replica).start()
+                                Message = f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(
+                                    self.FORMAT)
                                 for socketnum in x.users:
                                     if not (addr[1] == socketnum):
                                         if len(Message) > 2:
-                                            print("before sending in server: ", Message)
+                                            print(
+                                                "before sending in server: ", Message)
                                             self.all_connected_client[socketnum][1].send(
                                                 Message)
 
@@ -145,9 +146,10 @@ class Server:
                 if msg[:7] == "/CREATE":
                     # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
                     if len(msg) > 8:
-                        user=f"{addr[0]}:{client_port}"
+                        user = f"{addr[0]}:{client_port}"
                         self.CreateRoom(user, msg[8:], self.server_ip)
-                        conn.send(f"Room with name {msg[8:]} is created".encode(self.FORMAT))
+                        conn.send(
+                            f"Room with name {msg[8:]} is created".encode(self.FORMAT))
                         threading.Thread(target=self.form_replica).start()
 
                         for key, value in self.all_connected_client.items():
@@ -186,7 +188,7 @@ class Server:
                 #     conn.send([x for x in ChatRooms])
 
     # update chat room group view
-        user=f"{addr[0]}:{client_port}"
+        user = f"{addr[0]}:{client_port}"
         for room in self.chat_rooms:
             if (user in room.users):
                 room.remove_user(user)
@@ -251,30 +253,32 @@ class Server:
         while True:
             try:
                 messagelen = conn.recv(64)
-            except ConnectionResetError as exception :
+            except ConnectionResetError as exception:
                 if self.is_leader:
-                        for servers in self.server_dic:
-                            connect_to_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            try:
-                                connect_to_server_socket.connect((servers.split(":")[0], int(servers.split(":")[1])))
-                            except:
-                                index_of_crashed_server= self.server_dic.index(f"{addr[0]}:{servers.split(':')[1]}")
-                                del self.server_dic[index_of_crashed_server]
-                                del self.server_hp[index_of_crashed_server]
-                                self.form_ring()
-                                replica = {
+                    for servers in self.server_dic:
+                        connect_to_server_socket = socket.socket(
+                            socket.AF_INET, socket.SOCK_STREAM)
+                        try:
+                            connect_to_server_socket.connect(
+                                (servers.split(":")[0], int(servers.split(":")[1])))
+                        except:
+                            index_of_crashed_server = self.server_dic.index(
+                                f"{addr[0]}:{servers.split(':')[1]}")
+                            del self.server_dic[index_of_crashed_server]
+                            del self.server_hp[index_of_crashed_server]
+                            self.form_ring()
+                            replica = {
                                 "chat_rooms": self.room_to_dict(),
                                 "servers_list": self.server_dic,
                                 "leader_IP": self.leaderIP}
-                                self.send_updates(json.dumps(replica))
-                                conn.close()
-                                return   
+                            self.send_updates(json.dumps(replica))
+                            conn.close()
+                            return
             message = ""
-    
+
             try:
                 messagelen = json.loads(messagelen.decode(self.FORMAT))
                 message = conn.recv(messagelen)
-               
 
             except:
                 message = conn.recv(len(messagelen.decode(self.FORMAT)))
@@ -284,9 +288,9 @@ class Server:
                     message = json.loads(message.decode(self.FORMAT))
                     print('message content: ', message)
 
-                    if 'Type' not in message.keys():  
-                                      
-                        self.dic_to_room(message['chat_rooms'])                   
+                    if 'Type' not in message.keys():
+
+                        self.dic_to_room(message['chat_rooms'])
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
@@ -302,8 +306,6 @@ class Server:
                     # change the server's hp to 'True' when the leader server receives the hearbeat
                     message = message.decode(self.FORMAT)
                     port = message.split(":")[1]
-                    
-                    
 
                     for i, ip in enumerate(self.server_hp):
                         if ip[0] == f"{addr[0]}:{port}":
@@ -558,8 +560,10 @@ class Server:
                 self.is_leader = True
                 self.leaderIP = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
                 print("I HAVE BEEN ELECTED THE NEW LEADER :dancer: :dancer: :dancer:")
-                self.server_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.server_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                self.server_server_socket = socket.socket(
+                    socket.AF_INET, socket.SOCK_DGRAM)
+                self.server_server_socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                 self.server_server_socket.bind(self.SERVERSERVERADDR)
                 threading.Thread(target=self.ServerBroadListen).start()
                 return
@@ -648,40 +652,38 @@ class Server:
                 to_send_len = json.dumps(len(to_send))
                 connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
                 connect_to_server_socket.send(to_send.encode(self.FORMAT))
+
     def form_replica(self):
         print("t3rf 2nk t3ban ya man")
         replica = {
-        "chat_rooms":  self.room_to_dict(),
-        "servers_list": self.server_dic,
-        "leader_IP": self.leaderIP}
+            "chat_rooms":  self.room_to_dict(),
+            "servers_list": self.server_dic,
+            "leader_IP": self.leaderIP}
         print("this is the sent chat room serialized :", replica["chat_rooms"])
         self.send_updates(json.dumps(replica))
 
     def room_to_dict(self):
-        room_dict={}
-        for i,room in enumerate(self.chat_rooms):
-                room_dict[f"{i}_name"]=room.name
-                room_dict[f"{i}_server_on"]=room.server_on
-                room_dict[f"{i}_users"]=room.users
-                room_dict[f"{i}_Leader"]=room.Leader
-                room_dict[f"{i}_messages"]=room.messages
-                room_dict[f"{i}_sequencer"]=room.sequencer
+        room_dict = {}
+        for i, room in enumerate(self.chat_rooms):
+            room_dict[f"{i}_name"] = room.name
+            room_dict[f"{i}_server_on"] = room.server_on
+            room_dict[f"{i}_users"] = room.users
+            room_dict[f"{i}_Leader"] = room.Leader
+            room_dict[f"{i}_messages"] = room.messages
+            room_dict[f"{i}_sequencer"] = room.sequencer
         return room_dict
 
-        
-    def dic_to_room(self,dict_room):
-        self.chat_rooms=[]
-        if not dict_room==[]:
-            for i in range(0,len(dict_room.keys()),6):
-                x = ChatRoom(dict_room[dict_room[i]],dict_room[dict_room[i+1]])
-                x.users=dict_room[dict_room[i+2]] 
-                x.Leader=dict_room[dict_room[i+3]]
-                x.messages=dict_room[dict_room[i+4]]
-                x.sequencer=dict_room[dict_room[i+5]]
+    def dic_to_room(self, dict_room):
+        self.chat_rooms = []
+        if not dict_room == []:
+            for i in range(0, len(dict_room.keys()), 6):
+                x = ChatRoom(dict_room[list(dict_room)[i]],
+                             dict_room[list(dict_room)[i+1]])
+                x.users = dict_room[list(dict_room)[i+2]]
+                x.Leader = dict_room[list(dict_room)[i+3]]
+                x.messages = dict_room[list(dict_room)[i+4]]
+                x.sequencer = dict_room[list(dict_room)[i+5]]
                 self.chat_rooms.append(x)
-
-
-
 
 
 def main(is_leader, port):
