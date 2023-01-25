@@ -264,26 +264,7 @@ class Server:
             try:
                 messagelen = conn.recv(64)
             except ConnectionResetError as exception:
-                if self.is_leader:
-                    for servers in self.server_dic:
-                        connect_to_server_socket = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM)
-                        try:
-                            connect_to_server_socket.connect(
-                                (servers.split(":")[0], int(servers.split(":")[1])))
-                        except:
-                            index_of_crashed_server = self.server_dic.index(
-                                f"{addr[0]}:{servers.split(':')[1]}")
-                            del self.server_dic[index_of_crashed_server]
-                            del self.server_hp[index_of_crashed_server]
-                            self.form_ring()
-                            replica = {
-                                "chat_rooms": self.room_to_dict(),
-                                "servers_list": self.server_dic,
-                                "leader_IP": self.leaderIP}
-                            self.send_updates(json.dumps(replica))
-                            conn.close()
-                            return
+                return
             message = ""
 
             try:
