@@ -82,7 +82,7 @@ class Server:
 
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] {addr} connected.")
-
+        port=""
         connected = True
         # LOOPING UNTILL THE CLIENT SENDS THE DISCONNECT MESSAGE OR CLOSES THE TERMINAL
         while connected:
@@ -97,20 +97,31 @@ class Server:
 
                 del self.all_connected_client[addr[1]]
                 for chat_rooms in self.chat_rooms:
-                    if chat_rooms.Leader== addr[1]:
+                    if chat_rooms.Leader== f"{addr[0]}:{port}":
                         if len(chat_rooms.users)==1:
                             self.chat_rooms.remove(chat_rooms)
+                            threading.Thread(target=self.form_replica).start()
                         else:
-                            chat_rooms.Leader=chat_rooms.users[0]    
-                    
+                            chat_rooms.users.remove(f"{addr[0]}:{port}")
+                            chat_rooms.Leader=chat_rooms.users[0]  
+                            threading.Thread(target=self.form_replica).start()  
+                    elif f"{addr[0]}:{port}" in chat_rooms.users:
+                        chat_rooms.users.remove(f"{addr[0]}:{port}")
+                        threading.Thread(target=self.form_replica).start()  
+
 
                 msg_length = None
                 conn.close()
+                return
 
             if msg_length:
                 msg_length = int(msg_length)
                 msg = conn.recv(msg_length).decode(self.FORMAT)
+                client_port=msg.split("?")[0]
+                port=client_port
 
+                print("This is the stored client port:",port)
+                msg=msg.split("?")[1]
                 # Keyword to send Messages from clients to other clients in same chatroom
                 if msg[:2] == "/M":
                     Message = msg.split(" ")
@@ -132,7 +143,8 @@ class Server:
                 if msg[:7] == "/CREATE":
                     # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
                     if len(msg) > 8:
-                        self.CreateRoom(addr[1], msg[8:], self.server_ip)
+                        user=f"{addr[0]}:{client_port}"
+                        self.CreateRoom(user, msg[8:], self.server_ip)
                         conn.send(f"Room with name {msg[8:]} is created".encode(self.FORMAT))
                         threading.Thread(target=self.form_replica).start()
 
@@ -150,7 +162,7 @@ class Server:
                     if len(msg) > 6:
                         room = self.RoomSearch(msg[6:])
                         if not (room == None):
-                            room.add_user(addr[1])
+                            room.add_user(f"{addr[0]}:{client_port}")
                             threading.Thread(target=self.form_replica).start()
                             conn.send(
                                 f"{room.sequencer}?You have joined {room.name} chatroom".encode(self.FORMAT))
@@ -172,11 +184,12 @@ class Server:
                 #     conn.send([x for x in ChatRooms])
 
     # update chat room group view
+        user=f"{addr[0]}:{client_port}"
         for room in self.chat_rooms:
-            if (addr[1] in room.users):
-                room.remove_user(addr[1])
+            if (user in room.users):
+                room.remove_user(user)
                 print(
-                    f"User {addr[1]} has left the chat room {room.name}!")
+                    f"User {user} has left the chat room {room.name}!")
         conn.close()
 
  # _________________________________________________________________________________________
@@ -270,10 +283,8 @@ class Server:
                     print('message content: ', message)
 
                     if 'Type' not in message.keys():  
-                        try:              
-                            self.dic_to_room(message['chat_rooms'])     
-                        except:
-                            self.chat_rooms=message['chat_rooms']
+                                      
+                        self.dic_to_room(message['chat_rooms'])                   
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
@@ -658,13 +669,14 @@ class Server:
         
     def dic_to_room(self,dict_room):
         self.chat_rooms=[]
-        for i in range(0,len(dict_room.keys()),6):
-            x = ChatRoom(dict_room[dict_room[i]],dict_room[dict_room[i+1]])
-            x.users=dict_room[dict_room[i+2]] 
-            x.Leader=dict_room[dict_room[i+3]]
-            x.messages=dict_room[dict_room[i+4]]
-            x.sequencer=dict_room[dict_room[i+5]]
-            self.chat_rooms.append(x)
+        if not dict_room==[]:
+            for i in range(0,len(dict_room.keys()),6):
+                x = ChatRoom(dict_room[dict_room[i]],dict_room[dict_room[i+1]])
+                x.users=dict_room[dict_room[i+2]] 
+                x.Leader=dict_room[dict_room[i+3]]
+                x.messages=dict_room[dict_room[i+4]]
+                x.sequencer=dict_room[dict_room[i+5]]
+                self.chat_rooms.append(x)
 
 
 
