@@ -1,3 +1,4 @@
+import json
 class ChatRoom:
     def __init__(self, name,server_on):
         self.name = name
@@ -23,3 +24,17 @@ class ChatRoom:
     def get_messages(self):
         #ToDo
         s=1
+    def Serialize(self):
+        self.name=json.dumps(self.name) 
+        self.server_on=json.dumps(self.name)  
+        self.users = json.dumps(self.users)
+        self.Leader= json.dumps(self.Leader)
+        self.messages = json.dumps(self.messages)
+        self.sequencer=json.dumps(self.sequencer)
+    def deserialize(self):    
+        self.name=json.loads(self.name) 
+        self.server_on=json.loads(self.name)  
+        self.users = json.loads(self.users)
+        self.Leader= json.loads(self.Leader)
+        self.messages = json.loads(self.messages)
+        self.sequencer=json.loads(self.sequencer)

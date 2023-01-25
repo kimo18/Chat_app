@@ -276,9 +276,12 @@ class Server:
 
                     if 'Type' not in message.keys():
                         try:
-                            self.chat_rooms = message['chat_rooms']
+                            self.chat_rooms =[room.deserialize() for room in message['chat_rooms']]
                         except:
-                            self.chat_rooms = json.loads(message['chat_rooms'])
+                            self.chat_rooms = message['chat_rooms']
+
+                            
+                            
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
@@ -647,7 +650,7 @@ class Server:
     def form_replica(self):
         print("t3rf 2nk t3ban ya man")
         replica = {
-        "chat_rooms":json.dumps(self.chat_rooms),
+        "chat_rooms":  [room.serialize() for room in self.chat_rooms],
         "servers_list": self.server_dic,
         "leader_IP": self.leaderIP}
         self.send_updates(json.dumps(replica))
