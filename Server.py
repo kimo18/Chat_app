@@ -128,7 +128,7 @@ class Server:
                     if len(Message) > 1:
                         roomname = Message[1]
                         for x in self.chat_rooms:
-                            if x.name == roomname and (addr[1] in x.users):
+                            if x.name == roomname and (f"{addr[0]}:{client_port}" in x.users):
                                 x.sequencer += 1
                                 threading.Thread(
                                     target=self.form_replica).start()
@@ -151,6 +151,12 @@ class Server:
                         conn.send(
                             f"Room with name {msg[8:]} is created".encode(self.FORMAT))
                         threading.Thread(target=self.form_replica).start()
+                        try:
+                            client_data=self.all_connected_client[addr[1]]
+                            del self.all_connected_client[addr[1]]
+                            self.all_connected_client[user]=client_data
+                        except:
+                            pass
 
                         for key, value in self.all_connected_client.items():
                             if not (key == addr[1]):
@@ -343,7 +349,11 @@ class Server:
             print(message, Type)
             # SendRoomsThread = threading.Thread(target=SendRooms, args=(senderIP,addr,Type))
             # SendRoomsThread.start()
-            self.SendRooms(int(message), addr, Type)
+            try:
+                self.SendRooms(int(message), addr, Type)
+            except:
+                self.SendRooms(message, addr, Type)
+      
 
 
 # _________________________________________________________________________________________

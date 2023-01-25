@@ -212,7 +212,10 @@ while True:
 
         elif len(mess) >= 2:
             if mess[:2] == "/A":
-                broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
+                if FT:
+                    broadcast(BROADCASTIP, BROADCASTPORT, Socketconn)
+                else:
+                    broadcast(BROADCASTIP, BROADCASTPORT, f"{serverIP}:{Port_tobroadcast}")
             elif mess[:2] == "/M":
                 local_timestamp+=1
                 send(f"{Port_tobroadcast}?{mess}")
