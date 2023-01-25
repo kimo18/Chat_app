@@ -119,6 +119,7 @@ class Server:
                         for x in self.chat_rooms:
                             if x.name == roomname and (addr[1] in x.users):
                                 x.sequencer+=1
+                                threading.Thread(target=self.form_replica).start()
                                 Message = f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(self.FORMAT)
                                 for socketnum in x.users:
                                     if not (addr[1] == socketnum):
@@ -133,6 +134,8 @@ class Server:
                     if len(msg) > 8:
                         self.CreateRoom(addr[1], msg[8:], self.server_ip)
                         conn.send(f"Room with name {msg[8:]} is created".encode(self.FORMAT))
+                        threading.Thread(target=self.form_replica).start()
+
                         for key, value in self.all_connected_client.items():
                             print(key, value)
                             if not (key == addr[1]):
@@ -149,6 +152,7 @@ class Server:
                         room = self.RoomSearch(msg[6:])
                         if not (room == None):
                             room.add_user(addr[1])
+                            threading.Thread(target=self.form_replica).start()
                             conn.send(
                                 f"{room.sequencer}?You have joined {room.name} chatroom".encode(self.FORMAT))
                         else:
@@ -637,7 +641,13 @@ class Server:
                 to_send_len = json.dumps(len(to_send))
                 connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
                 connect_to_server_socket.send(to_send.encode(self.FORMAT))
-   
+    def form_replica(self):
+        replica = {
+        "chat_rooms": self.chat_rooms,
+        "servers_list": self.server_dic,
+        "leader_IP": self.leaderIP}
+        self.send_updates(json.dumps(replica))
+        
         
 
 def main(is_leader, port):
