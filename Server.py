@@ -274,14 +274,8 @@ class Server:
                     print("pickled")
                     print('message content: ', message)
 
-                    if 'Type' not in message.keys():
-                        try:
-                            self.chat_rooms =json.loads(message['chat_rooms'])
-                        except:
-                            self.chat_rooms = message['chat_rooms']
-
-                            
-                            
+                    if 'Type' not in message.keys():                
+                        self.dic_to_room(message['chat_rooms'])     
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
@@ -650,13 +644,37 @@ class Server:
     def form_replica(self):
         print("t3rf 2nk t3ban ya man")
         replica = {
-        "chat_rooms":  [room.serialize() for room in self.chat_rooms],
+        "chat_rooms":  self.room_to_dict(),
         "servers_list": self.server_dic,
         "leader_IP": self.leaderIP}
         print("this is the sent chat room serialized :", replica["chat_rooms"])
         self.send_updates(json.dumps(replica))
+
+    def room_to_dict(self):
+        room_dict={}
+        for i,room in enumerate(self.chat_rooms):
+                room_dict[f"{i}_name"]=room.name
+                room_dict[f"{i}_server_on"]=room.server_on
+                room_dict[f"{i}_users"]=room.users
+                room_dict[f"{i}_Leader"]=room.Leader
+                room_dict[f"{i}_messages"]=room.messages
+                room_dict[f"{i}_sequencer"]=room.sequencer
+        return room_dict
+
         
-        
+    def dic_to_room(self,dict_room):
+        self.chat_rooms=[]
+        for i in range(0,len(dict_room.keys()),6):
+            x = ChatRoom(dict_room[dict_room[i]],dict_room[dict_room[i+1]])
+            x.users=dict_room[dict_room[i+2]] 
+            x.Leader=dict_room[dict_room[i+3]]
+            x.messages=dict_room[dict_room[i+4]]
+            x.sequencer=dict_room[dict_room[i+5]]
+            self.chat_rooms.append(x)
+
+
+
+
 
 def main(is_leader, port):
     our_server = Server(is_leader, port)

@@ -1,4 +1,3 @@
-import json
 class ChatRoom:
     def __init__(self, name,server_on):
         self.name = name
@@ -24,7 +23,3 @@ class ChatRoom:
     def get_messages(self):
         #ToDo
         s=1
-    def serialize(self):
-        json.dumps(self, indent = 4, default=lambda o: o.__dict__)
-        print(self.name, self.users,self.Leader)
-    
