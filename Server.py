@@ -246,16 +246,16 @@ class Server:
                                 connect_to_server_socket.connect((servers.split(":")[0], int(servers.split(":")[1])))
                                 print("3rftk ya mnwb anta meeeeeeeeeeeeen")
                             except:
-                                index_of_crashed_server= self.server_dic.index(f"{addr[1]}:{servers.split(':')[1]}")
+                                index_of_crashed_server= self.server_dic.index(f"{addr[0]}:{servers.split(':')[1]}")
                                 del self.server_dic[index_of_crashed_server]
                                 del self.server_hp[index_of_crashed_server]
                                 self.form_ring()
                                 replica = {
-                                "chat_rooms": self.chat_rooms,
+                                "chat_rooms": self.room_to_dict(),
                                 "servers_list": self.server_dic,
                                 "leader_IP": self.leaderIP}
                                 self.send_updates(json.dumps(replica))
-                                conn.close() 
+                                conn.close()
                                 return   
             message = ""
     
@@ -274,8 +274,11 @@ class Server:
                     print("pickled")
                     print('message content: ', message)
 
-                    if 'Type' not in message.keys():                
-                        self.dic_to_room(message['chat_rooms'])     
+                    if 'Type' not in message.keys():  
+                        try:              
+                            self.dic_to_room(message['chat_rooms'])     
+                        except:
+                            self.chat_rooms=message['chat_rooms']
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
