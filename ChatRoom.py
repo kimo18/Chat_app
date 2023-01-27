@@ -5,6 +5,7 @@ class ChatRoom:
         self.users = []
         self.Leader=""
         self.messages = []
+        self.sequencer=0
         
     def add_user(self, user):
         self.users.append(user)
