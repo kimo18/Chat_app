@@ -28,7 +28,7 @@ class Client:
     # port to broadcast when sending heartbeat to the leader server
     Port_tobroadcast = client_to_listen.getsockname()[1]
     # receiving thread for each client
-    Recthread = threading.Thread()
+    # Recthread = threading.Thread()
     # boolians
     is_not_connected = True
     is_server_down = True
@@ -112,9 +112,7 @@ class Client:
     # WHEN THE SOCKET RECEVIES THE IP FROM THE SERVER IT CONNECTS WITH THE SERVER TCP
 
     def GetServerIP(self):
-        global Recthread
         self.client_to_listen.listen()
-
         while True:
             conn = ''
             while self.is_server_down:
