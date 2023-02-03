@@ -83,9 +83,9 @@ class Server:
             except ConnectionResetError as exception:
                 connected = False
                 if not (self.chat_rooms):
-                    print(f"User {addr[1]} has left the system!")
+                    print(f"User {addr[0]}:{port} has left the chat room!")
 
-                del self.list_of_connected_clients[addr[1]]
+                del self.list_of_connected_clients[f"{addr[0]}:{port}"]
                 for chat_rooms in self.chat_rooms:
                     if chat_rooms.Leader == f"{addr[0]}:{port}":
                         if len(chat_rooms.users) == 1:
@@ -124,8 +124,10 @@ class Server:
                                     target=self.form_replica).start()
                                 message = f"{room.sequencer}_{addr[0]} sent: {message[2]}".encode(
                                     self.FORMAT)
+                                print("this is the users in the room {room.users}")
                                 for socket_num in room.users:
-                                    if not (addr[1] == socket_num):
+
+                                    if not (f"{addr[0]}:{client_port}" == socket_num):
                                         if len(message) > 2:
                                             self.list_of_connected_clients[socket_num][1].send(
                                                 message)
@@ -157,17 +159,28 @@ class Server:
                             self.FORMAT))
                 # CLIENT SEND A MESSAGE TO JOIN AN EXISTING CHAT ROOM
                 if msg[:5] == "/JOIN":
+
                     # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
                     if len(msg) > 6:
+                        user = f"{addr[0]}:{client_port}"
                         room = self.RoomSearch(msg[6:])
                         if not (room == None):
                             room.add_user(f"{addr[0]}:{client_port}")
                             threading.Thread(target=self.form_replica).start()
                             conn.send(
                                 f"{room.sequencer}?You have joined {room.name} chatroom".encode(self.FORMAT))
+                        try:
+                            client_data = self.list_of_connected_clients[addr[1]]
+                            del self.list_of_connected_clients[addr[1]]
+                            self.list_of_connected_clients[user] = client_data
+
+                        except:
+                            pass
+
+                            
                         else:
                             conn.send(
-                                f"There is no chatroom with name: {room.name}".encode(self.FORMAT))
+                                f"There is no chatroom with name: {msg[6:]}".encode(self.FORMAT))
 
                     else:
                         conn.send(
@@ -177,18 +190,7 @@ class Server:
                 if msg == self.DISCONNECT_MESSAGE:
                     connected = False
 
-                # if len(ChatRooms)==0:
-                #     conn.send("There is no Chat Rooms available If you want Create one Please Confrim with /CONFIRM !!".encode(FORMAT))
-                # else:
-                #     conn.send([x for x in ChatRooms])
-
-    # update chat room
-        user = f"{addr[0]}:{client_port}"
-        for room in self.chat_rooms:
-            if (user in room.users):
-                room.remove_user(user)
-                print(
-                    f"User {user} has left the chat room {room.name}!")
+                
         conn.close()
 
     def CreateRoom(self, user, name, server_iP):

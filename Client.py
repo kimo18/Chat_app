@@ -28,7 +28,7 @@ class Client:
     # port to broadcast when sending heartbeat to the leader server
     Port_tobroadcast = client_to_listen.getsockname()[1]
     # receiving thread for each client
-    # Recthread = threading.Thread()
+    Recthread = threading.Thread()
     # boolians
     is_not_connected = True
     is_server_down = True
@@ -63,6 +63,7 @@ class Client:
         # print(client.recv(64).decode(FORMAT))
 
     def NormReceiver(self, LserverIP, conn):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((LserverIP, 5050))
         self.is_server_down = False
 
@@ -71,7 +72,6 @@ class Client:
                 return
             self.client.settimeout(1)
             if self.is_server_down:
-                print("server dowwwwwwwwn")
                 self.FT = True
                 break
 
@@ -93,7 +93,6 @@ class Client:
                             print(msg, "\n")
                 except:
                     if self.is_server_down:
-                        print("server dowwwwwwwwn")
                         self.FT = True
                         break
             else:
@@ -103,10 +102,8 @@ class Client:
                     self.Socketconn = self.client.recv(64).decode(self.FORMAT)
                 except:
                     if self.is_server_down:
-                        print("server dowwwwwwwwn")
                         self.FT = True
                         break
-                print("THIS IS THE SOCK NUM", self.Socketconn)
                 self.FT = False
 
     # WHEN THE SOCKET RECEVIES THE IP FROM THE SERVER IT CONNECTS WITH THE SERVER TCP
