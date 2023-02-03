@@ -122,9 +122,9 @@ class Client:
 
             # start to listen for messeages coming from tcp side
             if not (self.is_started) and not self.is_server_down:
-                Recthread = threading.Thread(
+                self.Recthread = threading.Thread(
                     target=self.NormReceiver, args=(LServerIP[0], conn))
-                Recthread.start()
+                self.Recthread.start()
                 self.is_started = True
 
             # conn.close()

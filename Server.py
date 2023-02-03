@@ -107,8 +107,7 @@ class Server:
                 msg_length = int(msg_length)
                 msg = conn.recv(msg_length).decode(self.FORMAT)
 
-                print(
-                    "you dont have the right to call yourself a west coast gangster:", msg)
+                print(f"Client with address {addr[0]} and port {msg.split('?')[0]} is Alive")
                 client_port = msg.split("?")[0]
                 port = client_port
                 msg = msg.split("?")[1]
