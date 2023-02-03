@@ -160,8 +160,10 @@ class Server:
 
                         for key, value in self.all_connected_client.items():
                             if not (key == addr[1]):
+
+                                print(f"Created room with name {msg[8:]}") 
                                 value[1].send(
-                                    f"A new Room named {msg[8:]} was Created by User {user}".encode(self.FORMAT))
+                                    f"A new room named {msg[8:]} was created by user {user}".encode(self.FORMAT))
 
                     else:
                         conn.send("Please Specify the name of the chatroom you want to create".encode(
@@ -175,6 +177,7 @@ class Server:
                         if not (room == None):
                             room.add_user(f"{addr[0]}:{client_port}")
                             threading.Thread(target=self.form_replica).start()
+                            print(f"User{addr[0]}:{client_port} Joined Room{room.name} ")
                             conn.send(
                                 f"{room.sequencer}?You have joined {room.name} chatroom".encode(self.FORMAT))
 
@@ -187,7 +190,7 @@ class Server:
                                 pass    
                         else:
                             conn.send(
-                                f"There is no chatroom with name: {room.name}".encode(self.FORMAT))
+                                f"There is no chatroom with name: {msg[6:]}".encode(self.FORMAT))
 
                     else:
                         conn.send(
