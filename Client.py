@@ -61,7 +61,6 @@ def NormReceiver(LserverIP, conn):
             return
         client.settimeout(1)
         if serverdown:
-            print("server dowwwwwwwwn")
             FT = True
             break
 
@@ -72,11 +71,8 @@ def NormReceiver(LserverIP, conn):
 
                     if '_' in msg:
                         
-                        print("UNDERSCORE")
                         time_stamp=msg.split('_')[0]
                         thread = threading.Thread(target=check_precedence,args=(time_stamp,msg))
-                        print("will start thread")
-                        print(f"thread {thread.getName()} is alive ", thread.is_alive())
                         thread.start()
                     
                     elif '?' in msg:
@@ -86,7 +82,6 @@ def NormReceiver(LserverIP, conn):
                         print(msg, "\n")
             except:
                 if serverdown:
-                    print("server dowwwwwwwwn")
                     FT = True
                     break
         else:
@@ -96,10 +91,8 @@ def NormReceiver(LserverIP, conn):
                 Socketconn = client.recv(64).decode(FORMAT)
             except:
                 if serverdown:
-                    print("server dowwwwwwwwn")
                     FT = True
                     break
-            print("THIS IS THE SOCK NUM", Socketconn)
             FT = False
 
 # WHEN THE SOCKET RECEVIES THE IP FROM THE SERVER IT CONNECT WITH THE SERVER TCP
@@ -120,10 +113,10 @@ def GetServerIP():
 
         # START HERE TO listen from messeages coming from tcp Side
         if not (started) and not serverdown:
+            started = True
             Recthread = threading.Thread(
                 target=NormReceiver, args=(LServerIP[0], conn))
             Recthread.start()
-            started = True
 
         # conn.close()
 # Send a heart beat to the server to check if it is available or not (detect server crash)

@@ -79,7 +79,7 @@ class Server:
 # _________________________________________________________________________________________
 
     def handle_client(self, conn, addr):
-        print(f"[NEW CONNECTION] {addr} connected.")
+        print(f"[NEW CONNECTION] Client with {addr[0], addr[1]} connected.")
         port = ""
         connected = True
         # LOOPING UNTILL THE CLIENT SENDS THE DISCONNECT MESSAGE OR CLOSES THE TERMINAL
@@ -91,9 +91,12 @@ class Server:
                 # print("inside expect ", exception)
                 connected = False
                 if not (self.chat_rooms):
-                    print(f"User {addr[1]} has left the system!")
+                    print(f"User {addr[0]} has left the system!")
+                try:
+                    del self.all_connected_client[addr[1]]
+                except:
+                    del self.all_connected_client[f"{addr[0]}:{port}"]  
 
-                del self.all_connected_client[addr[1]]
                 for chat_rooms in self.chat_rooms:
                     if chat_rooms.Leader == f"{addr[0]}:{port}":
                         if len(chat_rooms.users) == 1:
@@ -115,12 +118,9 @@ class Server:
                 msg_length = int(msg_length)
                 msg = conn.recv(msg_length).decode(self.FORMAT)
 
-                print(
-                    "you dont have the right to call yourself a west coast gangster:", msg)
                 client_port = msg.split("?")[0]
                 port = client_port
 
-                print("This is the stored client port:", port)
                 msg = msg.split("?")[1]
                 # Keyword to send Messages from clients to other clients in same chatroom
                 if msg[:2] == "/M":
@@ -135,10 +135,9 @@ class Server:
                                 Message = f"{x.sequencer}_{addr[0]} sent: {Message[2]}".encode(
                                     self.FORMAT)
                                 for socketnum in x.users:
-                                    if not (addr[1] == socketnum):
+                                    if not (f"{addr[0]}:{port}" == socketnum):
                                         if len(Message) > 2:
-                                            print(
-                                                "before sending in server: ", Message)
+                                
                                             self.all_connected_client[socketnum][1].send(
                                                 Message)
 
@@ -153,19 +152,16 @@ class Server:
                         threading.Thread(target=self.form_replica).start()
                         try:
                             client_data=self.all_connected_client[addr[1]]
-                            print("NICE TRY")
                             del self.all_connected_client[addr[1]]
                             self.all_connected_client[user]=client_data
-                            print("NICE AFTER")
 
                         except:
-                            print("NICE except")
                             pass
 
                         for key, value in self.all_connected_client.items():
                             if not (key == addr[1]):
                                 value[1].send(
-                                    f"A new Room named {msg[8:]} was Created by User {addr[0]}".encode(self.FORMAT))
+                                    f"A new Room named {msg[8:]} was Created by User {user}".encode(self.FORMAT))
 
                     else:
                         conn.send("Please Specify the name of the chatroom you want to create".encode(
@@ -174,12 +170,21 @@ class Server:
                 if msg[:5] == "/JOIN":
                     # WE NEED TO CHECK IF THE CLIENT SEND A MESSAGE WITHOUT NAME OF THE CHATROOM OR NOT
                     if len(msg) > 6:
+                        user = f"{addr[0]}:{client_port}"
                         room = self.RoomSearch(msg[6:])
                         if not (room == None):
                             room.add_user(f"{addr[0]}:{client_port}")
                             threading.Thread(target=self.form_replica).start()
                             conn.send(
                                 f"{room.sequencer}?You have joined {room.name} chatroom".encode(self.FORMAT))
+
+                            try:
+                                client_data=self.all_connected_client[addr[1]]
+                                del self.all_connected_client[addr[1]]
+                                self.all_connected_client[user]=client_data
+
+                            except:
+                                pass    
                         else:
                             conn.send(
                                 f"There is no chatroom with name: {room.name}".encode(self.FORMAT))
@@ -191,19 +196,6 @@ class Server:
                 #  CHECK FOR THE DISCONNECT MESSAGE
                 if msg == self.DISCONNECT_MESSAGE:
                     connected = False
-
-                # if len(ChatRooms)==0:
-                #     conn.send("There is no Chat Rooms available If you want Create one Please Confrim with /CONFIRM !!".encode(FORMAT))
-                # else:
-                #     conn.send([x for x in ChatRooms])
-
-    # update chat room group view
-        user = f"{addr[0]}:{client_port}"
-        for room in self.chat_rooms:
-            if (user in room.users):
-                room.remove_user(user)
-                print(
-                    f"User {user} has left the chat room {room.name}!")
         conn.close()
 
  # _________________________________________________________________________________________
@@ -245,15 +237,11 @@ class Server:
 
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
-        print("Heloooooooooooooooooooooo",
-              self.leaderserver_to_server_socket.getsockname())
-
         while True:
             conn, addr = self.leaderserver_to_server_socket.accept()
             thread = threading.Thread(
                 target=self.server_recv, args=(conn, addr))
             thread.start()
-            print("bttts", addr)
 
 
 # _________________________________________________________________________________________
@@ -277,7 +265,6 @@ class Server:
             if len(message) > 0:
                 try:
                     message = json.loads(message.decode(self.FORMAT))
-                    print('message content: ', message)
 
                     if 'Type' not in message.keys():
 
@@ -285,11 +272,8 @@ class Server:
                         self.server_dic = message['servers_list']
                         self.leaderIP = message['leader_IP']
                         self.number_servers = len(self.server_dic)
-                        if message:
-                            print(
-                                f" this is the chat rooms{self.chat_rooms} \n [LIST OF SERVERS: ] {self.server_dic} with number of servers = {self.number_servers} \n and leader server is {self.leaderIP}")
+                        
                     else:
-                        print("inside else for forward election msg")
                         threading.Thread(target=self.forward_election_message, args=[
                                          message,]).start()
 
@@ -302,7 +286,6 @@ class Server:
                         if ip[0] == f"{addr[0]}:{port}":
 
                             self.server_hp[i] = (ip[0], True)
-                            print("booooooga", self.server_hp)
 
                     # _________________________________________________________________________________________
 
@@ -314,13 +297,11 @@ class Server:
 
             message = message.decode(self.FORMAT)
             message, Type = message.split(",")[0], message.split(",")[1]
-            print(message)
             if len(message.split(":")) == 2:
 
                 if message.split(":")[0] == "CONN":
                     # try:
                     if self.is_leader:
-                        print(f"Leader with address: {self.server_ip}")
                         connect_to_client_socket = socket.socket(
                             socket.AF_INET, socket.SOCK_STREAM)
                         connect_to_client_socket.connect(
@@ -328,16 +309,15 @@ class Server:
 
                     # except:
                     #     print("yoU WERE TRYING TO CONNECT TO AN ALREADY CONNECTION ")
-
+                    # try:
+                    #     self.SendRooms(int(message), addr, Type)
+                    # except:
+                    #     self.SendRooms(message, addr, Type)
                     continue
 
-            print(message, Type)
             # SendRoomsThread = threading.Thread(target=SendRooms, args=(senderIP,addr,Type))
             # SendRoomsThread.start()
-            try:
-                self.SendRooms(int(message), addr, Type)
-            except:
-                self.SendRooms(message, addr, Type)
+            
       
 
 
@@ -379,7 +359,6 @@ class Server:
 
 
     def SendRooms(self, ConnNumber, addr, Type):
-        print(addr)
         if ConnNumber and Type and self.is_leader:
             print(
                 f"Sending available chat rooms to client at address {addr[0]}")
@@ -438,7 +417,6 @@ class Server:
                         "leader_IP": self.leaderIP
                     }
                     self.send_updates(json.dumps(replica))
-                    print("to send", len(replica))
 
 
 # _________________________________________________________________________________________
@@ -456,16 +434,14 @@ class Server:
 #######################
 
     def form_ring(self):
-        print("before", self.server_dic)
-
+        print(f"Ring Formation started")
         ports = [member.split(":")[1] for member in self.server_dic]
         ips = [socket.inet_aton(member.split(":")[0])
                for member in self.server_dic]
         index = [i[0] for i in sorted(enumerate(ips), key=lambda x:x[1])]
         self.server_dic = [f"{socket.inet_ntoa(ip)}:{port}" for _, ip, port in sorted(
             zip(index, ips, ports))]
-        print("after", self.server_dic)
-        print("RingFormed")
+        print("Ring is Formed")
 
     def get_neighbour(self, direction='left'):
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -504,9 +480,6 @@ class Server:
         ring_socket.connect((ip, port))
         time.sleep(1)
         to_send_len = json.dumps(len(message))
-        print("start election, message dumps is: ", json.dumps(message))
-        print("start election, message loads is: ", json.loads(message))
-        print("LENGTH IS: ", len(message))
         ring_socket.send(to_send_len.encode(self.FORMAT))
         ring_socket.send(message.encode(self.FORMAT))
 
@@ -527,14 +500,12 @@ class Server:
         time.sleep(2)
         neighbour = self.get_neighbour()
         ip, port = neighbour.split(':')[0], neighbour.split(":")[1]
-        print(f"this is my neighbour {ip}  {port}")
         # creating a TCP socket to be used for passing election msgs around the ring
         ring_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ring_socket.connect((ip, int(port)))
 
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.server_dic.index(current_node)
-        print("btssssssssssssssssssssssssssss", neighbour_msg['is_Leader'])
         if neighbour_msg['is_Leader'] and not (neighbour_msg['PID'] == current_node_index):
             self.participant = False
             self.leaderIP = self.server_dic[neighbour_msg['PID']]
@@ -563,7 +534,6 @@ class Server:
                 threading.Thread(target=self.ServerBroadListen).start()
                 return
             else:
-                print("received my OWN ID")
                 new_election_message = {
                     "Type": "ELECT",
                     "PID": current_node_index,
@@ -598,7 +568,6 @@ class Server:
                 new_election_message).encode(self.FORMAT))
 
         elif neighbour_msg['PID'] > current_node_index:
-            print("PID is bigger than mine")
             # set self as participant and pass msg to next neighbour w/o updating PID
             self.participant = True
             to_send_len = json.dumps(len(json.dumps(neighbour_msg)))
@@ -632,6 +601,9 @@ class Server:
                     self.server_hp[i] = (ip[0], False)
 
     def send_updates(self, to_send):
+        if len(self.server_dic)>1:
+            print(f"Sending Updated Replica to other servers")
+
         for ip_port in self.server_dic:
 
             if not (ip_port == f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"):
@@ -640,7 +612,6 @@ class Server:
                 connect_to_server_socket.connect(
                     (ip_port.split(":")[0], int(ip_port.split(":")[1])))
                 # sending here the chat room replica to the new connected server
-                print("sending to Server", ip_port)
                 to_send_len = json.dumps(len(to_send))
                 connect_to_server_socket.send(to_send_len.encode(self.FORMAT))
                 connect_to_server_socket.send(to_send.encode(self.FORMAT))
@@ -649,12 +620,10 @@ class Server:
                 connect_to_server_socket.send(to_send.encode(self.FORMAT))
 
     def form_replica(self):
-        print("t3rf 2nk t3ban ya man")
         replica = {
             "chat_rooms":  self.room_to_dict(),
             "servers_list": self.server_dic,
             "leader_IP": self.leaderIP}
-        print("this is the sent chat room serialized :", replica["chat_rooms"])
         self.send_updates(json.dumps(replica))
 
     def room_to_dict(self):
@@ -684,11 +653,13 @@ class Server:
 def main(is_leader, port):
     our_server = Server(is_leader, port)
     print(our_server.port, our_server.is_leader)
-    print("[STARTING] server is starting...")
+    if our_server.is_leader:
+        print("[STARTING] Leader server is starting...")
+    else:
+        print("[STARTING] server is starting...")
+   
     our_server.begin()
 
 
 if __name__ == "__main__":
-
-    print(sys.argv)
     main(sys.argv[1], sys.argv[2])
