@@ -17,14 +17,17 @@ class Client:
     # JOINEDROOMS = []
     FT = True
     local_timestamp = 0
+
     broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    # listens to incoming msgs from server
     client_to_listen = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_to_listen.bind((MY_IP, 0))
     # SETUP THE CLIENT THAT WOULD CONNECT TO THE LEADER SERVER
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # LISTEN TO ANSWERS FROM THE BROADCASTED MESSAGE
+    # port to broadcast when sending heartbeat to the leader server
     Port_tobroadcast = client_to_listen.getsockname()[1]
+    # receiving thread for each client
     Recthread = threading.Thread()
     # boolians
     is_not_connected = True
@@ -163,42 +166,55 @@ class Client:
     # ---------------------------------------------------------------------------------------
 
     # --------------------------------------------------------------------------------------------
+def main():
+    our_client = Client()
+    
+    print(f"Client with IP:{our_client.MY_IP} is STARTING ...")
 
     while True:
-        if is_heartbeat_dead:
+        if our_client.is_heartbeat_dead:
             msg = input()
-            if msg == DISCONNECT_MESSAGE:
-                send(msg)
-                DISCONNECT_FLAG = True
-                broadcast_socket.close()
+            if msg == our_client.DISCONNECT_MESSAGE:
+                our_client.send(msg)
+                our_client.DISCONNECT_FLAG = True
+                our_client.broadcast_socket.close()
 
             elif len(msg) >= 2:
                 if msg[:2] == "/A":
-                    if FT or not is_first_msg_sent:
-                        broadcast(BROADCAST_IP,
-                                  BROADCAST_PORT, Socketconn)
+                    if our_client.FT or not our_client.is_first_msg_sent:
+                        our_client.broadcast(our_client.BROADCAST_IP,
+                                  our_client.BROADCAST_PORT, our_client.Socketconn)
                     else:
-                        broadcast(BROADCAST_IP, BROADCAST_PORT,
-                                  f"{server_IP}:{Port_tobroadcast}")
+                        our_client.broadcast(our_client.BROADCAST_IP,our_client.BROADCAST_PORT,
+                                  f"{our_client.server_IP}:{our_client.Port_tobroadcast}")
                 elif msg[:2] == "/M":
-                    local_timestamp += 1
-                    send(f"{Port_tobroadcast}?{msg}")
-                    is_first_msg_sent = True
+                    our_client.local_timestamp += 1
+                    our_client.send(f"{our_client.Port_tobroadcast}?{msg}")
+                    our_client.is_first_msg_sent = True
                 else:
                     if len(msg) >= 5:
                         if msg[:5] == "/JOIN":
-                            send(f"{Port_tobroadcast}?{msg}")
-                            is_first_msg_sent = True
+                            our_client.send(f"{our_client.Port_tobroadcast}?{msg}")
+                            our_client.is_first_msg_sent = True
 
                         else:
                             if len(msg) >= 7:
                                 if msg[:7] == "/CREATE":
-                                    send(
-                                        f"{Port_tobroadcast}?{msg}")
-                                    is_first_msg_sent = True
+                                    our_client.send(
+                                        f"{our_client.Port_tobroadcast}?{msg}")
+                                    our_client.is_first_msg_sent = True
 
                                 else:
                                     print("Not a valid Keyword\n")
+
+
+if __name__ == "__main__":
+    print(sys.argv)
+    main()
+
+
+
+    
 
     # if __name__ == "__main__":
     #     print(sys.argv)
