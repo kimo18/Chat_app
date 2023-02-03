@@ -495,6 +495,7 @@ class Server:
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
         current_node_index = self.servers_list.index(current_node)
 
+        # checking if a node has been elected a leader and this node is not me
         if neighbour_msg['is_Leader'] and not (neighbour_msg['PID'] == current_node_index):
             self.is_participant = False
             self.leader_IP = self.servers_list[neighbour_msg['PID']]
@@ -509,8 +510,9 @@ class Server:
             ring_socket.send(to_send_len.encode(self.FORMAT))
             ring_socket.send(json.dumps(neighbour_msg).encode(self.FORMAT))
 
+        # check if the current node has PID equal to that in the message sent
         elif neighbour_msg['PID'] == current_node_index:
-            # check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
+            # and then check if leader is receiving his own msg for the second time, so mark him as the leader & terminate
             if neighbour_msg['is_Leader'] == True:
                 self.is_leader = True
                 self.leader_IP = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
