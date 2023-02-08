@@ -1,12 +1,10 @@
 import socket
 import threading
-import pickle
 import sys
 from ChatRoom import ChatRoom
 import time
 import json
-# import emoji
-
+import emoji
 
 class Server:
     HEADER = 64
@@ -77,6 +75,7 @@ class Server:
 
 
 # _________________________________________________________________________________________
+
 
     def handle_client(self, conn, addr):
         print(f"[NEW CONNECTION] Client with {addr[0], addr[1]} connected.")
@@ -151,8 +150,12 @@ class Server:
                             f"Room with name {msg[8:]} is created".encode(self.FORMAT))
                         threading.Thread(target=self.form_replica).start()
                         try:
+                            client_data = self.all_connected_client[addr[1]]
+                            print("NICE TRY")
                             client_data=self.all_connected_client[addr[1]]
                             del self.all_connected_client[addr[1]]
+                            self.all_connected_client[user] = client_data
+                            print("NICE AFTER")
                             self.all_connected_client[user]=client_data
 
                         except:
@@ -212,6 +215,7 @@ class Server:
 
 # _________________________________________________________________________________________
 
+
     def RoomSearch(self, chatroom_name):
         for x in self.chat_rooms:
             if x.name == chatroom_name:
@@ -220,6 +224,7 @@ class Server:
 
 
 # _________________________________________________________________________________________
+
 
     def start(self):
         self.server_tolisten_socket.listen()
@@ -238,6 +243,7 @@ class Server:
 # _________________________________________________________________________________________
 #  server listen from other servers
 
+
     def serverlisten(self):
         self.leaderserver_to_server_socket.listen()
         while True:
@@ -249,6 +255,7 @@ class Server:
 
 # _________________________________________________________________________________________
 #  server receive from other server
+
 
     def server_recv(self, conn, addr):
         while True:
@@ -320,13 +327,18 @@ class Server:
 
             # SendRoomsThread = threading.Thread(target=SendRooms, args=(senderIP,addr,Type))
             # SendRoomsThread.start()
+            try:
+                self.SendRooms(int(message), addr, Type)
+            except:
+                self.SendRooms(message, addr, Type)
+
             
       
-
 
 # _________________________________________________________________________________________
 
 # Send heartbeat message from servers to leader server
+
 
     def send_heartbeat_message(self):
         recevied = False
@@ -360,7 +372,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def SendRooms(self, ConnNumber, addr, Type):
         if ConnNumber and Type and self.is_leader:
             print(
@@ -382,6 +393,7 @@ class Server:
 # _________________________________________________________________________________________
 # server broadcast to other server
 
+
     def s_broadcast(self, port, message):
 
         MESSAGE = message+","+"Server"
@@ -391,7 +403,6 @@ class Server:
 
 # _________________________________________________________________________________________
 # send to other server info
-
 
     def ServerBroadListen(self):
         print(
@@ -424,7 +435,6 @@ class Server:
 
 # _________________________________________________________________________________________
 
-
     def begin(self):
         thread = threading.Thread(target=self.start)
         broadthread = threading.Thread(target=self.start_broadcast)
@@ -435,6 +445,7 @@ class Server:
 #######################
 # For leader election #
 #######################
+
 
     def form_ring(self):
         print(f"Ring Formation started")
@@ -468,7 +479,6 @@ class Server:
 # this function will be used by each node in the ring to start the election
 # a node will construct its election msg and then pass it down to its neighbour
 
-
     def start_election(self):
         print("Leader election started..........")
         current_node = f"{self.server_ip}:{self.leaderserver_to_server_socket.getsockname()[1]}"
@@ -495,7 +505,6 @@ class Server:
     # it passes the msg down to the next node without updating the pid and marks itself as participant
 # a node receives an election msg with its own pid,
     # it understands that it has become the new leader and hence sends out a broadcast msg to notify all nodes
-
 
     def forward_election_message(self, neighbour_msg):
 
